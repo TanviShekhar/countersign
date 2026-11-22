@@ -7,7 +7,8 @@
 
   const BATCH = 12;
   const freeActs = a => a.open.filter(k => !pendingFor(a.id, k));
-  const eligibleAll = () => attention().filter(a => freeActs(a).length || (!a.acts.length && !a.did.escalate));
+  /* Admin's sweep covers every open item. A team's sweep covers only that team's own items. */
+  const eligibleAll = () => attention().filter(a => (CS.isAdmin() || a.role === S.role) && (freeActs(a).length || (!a.acts.length && !a.did.escalate)));
   const eligible = () => eligibleAll().slice(0, BATCH);
   const PLAIN = { hold_invoice: 'Hold the disputed amount', claim_credit: 'File the service credit claim', chase_document: 'Ask the supplier for the missing document', remind_owner: 'Remind the owner',
     chase_rebate: 'Ask for the overdue rebate', dispute_invoice: 'Send the invoice dispute', assign_owner: 'Assign an interim owner', send_notice: 'Send the non-renewal notice' };
@@ -153,20 +154,20 @@ When every item has been handled, reply with a summary of at most four sentences
   }
   function approvalsHtml(role) {
     const pend = S.approvals.filter(a => a.status === 'pending' && (!role || role === 'all' || a.role === role));
-    return pend.map(a => { const can = S.role === 'all' ? CS.isAdmin() : S.role === a.role, c = a.cid ? byId(a.cid) : null;
+    return pend.map(a => { const can = CS.isAdmin() || S.role === a.role, c = a.cid ? byId(a.cid) : null;
       return `<div class="appr"><div class="appr-top"><strong>${esc(ACT[a.action].label)}</strong>${pill('info', ROLE1[a.role] + ' approves')}</div>
         <div>${c ? `<a class="rowlink" href="${cLink(c)}">${esc(a.supplier)}</a>` : esc(a.supplier)}${a.amount ? ` · ${inrC(a.amount)}` : ''} ${isIso(a.due) ? dueChip(diff(a.due, S.asOf)) : ''}</div>
         <p class="muted">${esc(a.reason || a.title)}${a.note ? ` Needs approval because it is ${esc(a.note)}.` : ''} <span class="sm">Proposed by ${esc(a.from === 'Agent' ? 'the agent' : a.from)}, ${fmtD(a.on)}.</span></p>
-        <div class="btns">${a.message ? `<button class="btn sm" data-act="view-approval" data-id="${a.id}">Read the message</button>` : ''}<button class="btn sm primary" data-act="approve" data-id="${a.id}" ${can ? '' : 'disabled'}>${ACT[a.action].sends ? 'Approve and send' : 'Approve'}</button><button class="btn sm" data-act="reject" data-id="${a.id}" ${can ? '' : 'disabled'}>Reject</button>${can ? '' : `<span class="muted sm">Act as ${ROLE1[a.role]} to decide.</span>`}</div></div>`; }).join('');
+        <div class="btns">${a.message ? `<button class="btn sm" data-act="view-approval" data-id="${a.id}">Read the message</button>` : ''}<button class="btn sm primary" data-act="approve" data-id="${a.id}" ${can ? '' : 'disabled'}>${ACT[a.action].sends ? 'Approve and send' : 'Approve'}</button><button class="btn sm" data-act="reject" data-id="${a.id}" ${can ? '' : 'disabled'}>Reject</button>${can ? '' : `<span class="muted sm">For ${ROLE1[a.role]} to decide.</span>`}</div></div>`; }).join('');
   }
 
   /* ---------- the agent screen ---------- */
   function vAgent() {
-    const pend = S.approvals.filter(a => a.status === 'pending'), run = S.run, last = S.lastRun, st = agentStats(), n = eligibleAll().length, eng = engine(), busy = run && run.busy;
+    const adm = CS.isAdmin(), pend = S.approvals.filter(a => a.status === 'pending' && (adm || a.role === S.role)), logs = adm ? S.log : S.log.filter(l => l.role === S.role || l.who === CS.who()), run = S.run, last = S.lastRun, st = agentStats(), n = eligibleAll().length, eng = engine(), busy = run && run.busy;
     const opt = (k, title, text, tag) => `<button class="engopt${eng === k ? ' on' : ''}" data-act="engine" data-engine="${k}" ${busy ? 'disabled' : ''} aria-pressed="${eng === k}"><strong>${title}</strong>${tag}<span>${text}</span></button>`;
     return `
-    <div class="head"><h1>Agent</h1><p class="sub">One click and the agent works through the open items. It does the routine ones itself, asks before anything binding, and hands the rest to the right person. It never decides a renewal or ends a contract.</p></div>
-    ${CS.roleBar('You are acting as')}
+    <div class="head"><h1>Agent</h1><p class="sub">${adm ? 'One click and the agent works through the open items.' : `One click and the agent works through ${ROLE1[S.role]}'s open items.`} It does the routine ones itself, asks before anything binding, and hands the rest to the right person. It never decides a renewal or ends a contract.</p></div>
+    ${adm ? '' : CS.roleBar('')}
     <section class="panel" id="sweep">
       <ol class="how"><li><strong>It reads</strong><span>the ${plural(Math.min(n, BATCH), 'most urgent open item')}.</span></li><li><strong>It acts</strong><span>where your rules say it may.</span></li><li><strong>It asks or hands over</strong><span>everything else, with its reason.</span></li></ol>
       <div><div class="k">How should it decide?</div>
@@ -182,27 +183,27 @@ When every item has been handled, reply with a summary of at most four sentences
     <section class="panel"><div class="panel-head"><div><h2>${run ? 'Still open for the next sweep' : 'What the next sweep will do'}</h2><p class="muted sm">Worked out from the rules below, before anything runs. Change a rule and this list changes with it.</p></div>${pill(n ? 'info' : 'ok', plural(n, 'open item'))}</div>${previewHtml()}</section>
     <div class="split">
       <section class="panel"><div class="panel-head"><h2>Waiting for approval</h2>${pill(pend.length ? 'warn' : 'ok', String(pend.length))}</div>
-        ${approvalsHtml('all') || '<p class="empty">Nothing is waiting. Run the sweep, or send a draft for approval from a contract or invoice.</p>'}</section>
-      <section class="panel"><h2>Rules the agent works under</h2><p class="muted sm">For each kind of action, choose whether the agent may do it alone, must ask first, or may not do it.</p>
-        <div class="pol">${Object.keys(ACT).filter(k => !ACT[k].internal).map(k => { const A = ACT[k], p = policy(k);
+        ${approvalsHtml(adm ? 'all' : S.role) || `<p class="empty">${adm ? 'Nothing is waiting. Run the sweep, or send a draft for approval from a contract or invoice.' : 'Nothing is waiting for you. Proposals that need ' + ROLE1[S.role] + ' will appear here.'}</p>`}</section>
+      <section class="panel"><h2>${adm ? 'Rules the agent works under' : 'Rules that send work to you'}</h2><p class="muted sm">${adm ? 'For each kind of action, choose whether the agent may do it alone, must ask first, or may not do it.' : 'Set by Admin. They decide when the agent acts alone and when it asks ' + ROLE1[S.role] + ' first.'}</p>
+        <div class="pol">${Object.keys(ACT).filter(k => !ACT[k].internal && (adm || ACT[k].approver === S.role)).map(k => { const A = ACT[k], p = policy(k);
           return `<div class="pol-row"><div><label for="pol-${k}"><strong>${esc(A.label)}</strong></label><div class="muted sm">${esc(A.why)}</div></div>
-            <div class="pol-ctl"><select id="pol-${k}" data-pol="${k}"><option value="off"${p.mode === 'off' ? ' selected' : ''}>Off</option><option value="ask"${p.mode === 'ask' ? ' selected' : ''}>Ask first</option>${A.askOnly ? '' : `<option value="auto"${p.mode === 'auto' ? ' selected' : ''}>Do it and tell me</option>`}</select>
-            ${A.money ? `<label class="lim" for="lim-${k}">up to ₹<input id="lim-${k}" data-lim="${k}" type="number" min="0" step="50000" value="${p.limit}"></label>` : ''}</div></div>`; }).join('')}</div>
+            <div class="pol-ctl"><select id="pol-${k}" data-pol="${k}" ${adm ? '' : 'disabled'}><option value="off"${p.mode === 'off' ? ' selected' : ''}>Off</option><option value="ask"${p.mode === 'ask' ? ' selected' : ''}>Ask first</option>${A.askOnly ? '' : `<option value="auto"${p.mode === 'auto' ? ' selected' : ''}>Do it and tell me</option>`}</select>
+            ${A.money ? `<label class="lim" for="lim-${k}">up to ₹<input id="lim-${k}" data-lim="${k}" type="number" min="0" step="50000" value="${p.limit}" ${adm ? '' : 'disabled'}></label>` : ''}</div></div>`; }).join('')}</div>
         <ul class="fixed"><li>It never decides a renewal, ends a contract or changes a contract.</li><li>It will not act on a contract term until a person has confirmed it.</li><li>Every action is logged with its reason. Actions that only change this system can be undone.</li><li>Sending is simulated here: messages go to an outbox in this prototype, not to real email.</li></ul></section>
     </div>
     <section class="panel flush">
-      <div class="pad panel-head"><h2>Activity log</h2><span class="muted sm">${st.auto} done by the agent alone · ${st.appr} approved · ${st.rej} rejected · ${st.undone} undone${st.overturn == null ? '' : ` · ${st.overturn}% overturned`}</span></div>
-      ${S.log.length ? `<div class="scroll"><table class="t"><thead><tr><th>Date</th><th>Who</th><th>What happened</th><th></th></tr></thead><tbody>
-        ${S.log.slice(0, 60).map(l => { const c = l.cid ? byId(l.cid) : null; return `<tr class="${l.undone ? 'undone' : ''}"><td class="nowrap">${fmtD(l.on)}</td><td class="nowrap">${l.who === 'Agent' ? pill('info', 'Agent') : esc(l.who)}</td><td>${esc(l.who === 'Agent' ? 'The agent ' : '')}${esc(l.text)}${l.reason ? `<div class="muted sm">Reason: ${esc(l.reason)}</div>` : ''}${c ? ` <a class="cite" href="${cLink(c)}">${esc(c.id)}</a>` : ''}</td><td class="nowrap">${l.msg ? `<button class="btn xs" data-act="view-msg" data-id="${l.msg}">Read message</button> ` : ''}${l.undo && !l.undone ? `<button class="btn xs" data-act="undo" data-id="${l.id}">Undo</button>` : l.undone ? '<span class="muted sm">Undone</span>' : ''}</td></tr>`; }).join('')}
+      <div class="pad panel-head"><h2>${adm ? 'Activity log' : 'Activity for ' + ROLE1[S.role]}</h2><span class="muted sm">${adm ? `${st.auto} done by the agent alone · ${st.appr} approved · ${st.rej} rejected · ${st.undone} undone${st.overturn == null ? '' : ` · ${st.overturn}% overturned`}` : 'What the agent did on your items, and what you did.'}</span></div>
+      ${logs.length ? `<div class="scroll"><table class="t"><thead><tr><th>Date</th><th>Who</th><th>What happened</th><th></th></tr></thead><tbody>
+        ${logs.slice(0, 60).map(l => { const c = l.cid ? byId(l.cid) : null; return `<tr class="${l.undone ? 'undone' : ''}"><td class="nowrap">${fmtD(l.on)}</td><td class="nowrap">${l.who === 'Agent' ? pill('info', 'Agent') : esc(l.who)}</td><td>${esc(l.who === 'Agent' ? 'The agent ' : '')}${esc(l.text)}${l.reason ? `<div class="muted sm">Reason: ${esc(l.reason)}</div>` : ''}${c ? ` <a class="cite" href="${cLink(c)}">${esc(c.id)}</a>` : ''}</td><td class="nowrap">${l.msg ? `<button class="btn xs" data-act="view-msg" data-id="${l.msg}">Read message</button> ` : ''}${l.undo && !l.undone ? `<button class="btn xs" data-act="undo" data-id="${l.id}">Undo</button>` : l.undone ? '<span class="muted sm">Undone</span>' : ''}</td></tr>`; }).join('')}
       </tbody></table></div>` : '<p class="empty pad">Nothing yet. Actions by the agent and by people will appear here.</p>'}
     </section>
-    <section class="panel" id="hosting"><h2>Running the sweep when this is hosted</h2>
+    ${adm ? `<section class="panel" id="hosting"><h2>Running the sweep when this is hosted</h2>
       <div class="hostgrid">
         <div><div class="k">Inside Claude</div><p>The page uses the viewer's own Claude. Nothing to set up.</p></div>
         <div><div class="k">Hosted, no AI</div><p>On a plain web host such as GitHub Pages, choose <strong>Built-in rules</strong>. The same rules, approvals and log apply, with standard wording.</p></div>
         <div><div class="k">Hosted, with Claude</div><p>Select <strong>Connect AI</strong> and paste a Claude API key. It stays in this browser tab and goes only to the Claude API. Suitable for a demo, not for shared computers.</p></div>
         <div><div class="k">In production</div><p>Run the sweep on a schedule from a server that holds the key, write the results to a shared database, and let this page read them. The README describes the steps.</p></div>
-      </div></section>`;
+      </div></section>` : ''}`;
   }
 
   Object.assign(CS, { runSweep, paintRun, vAgent, approvalsHtml, sweepEngine: engine });

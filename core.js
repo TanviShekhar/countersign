@@ -70,7 +70,7 @@
     owner: { role: 'owner', name: D.people.owner, label: 'Business owner', blurb: 'Renewal decisions, service credits and everything about the contracts you own.' }
   };
   const isAdmin = () => S.user === 'admin';
-  const TABS_FOR = { finance: ['overview', 'contracts', 'invoices', 'value', 'ask'], legal: ['overview', 'contracts', 'ask', 'add'], procurement: ['overview', 'contracts', 'renewals', 'ask', 'add'], owner: ['overview', 'contracts', 'renewals', 'ask'] };
+  const TABS_FOR = { finance: ['overview', 'contracts', 'invoices', 'value', 'ask', 'agent'], legal: ['overview', 'contracts', 'ask', 'add', 'agent'], procurement: ['overview', 'contracts', 'renewals', 'ask', 'add', 'agent'], owner: ['overview', 'contracts', 'renewals', 'ask', 'agent'] };
   const canSee = tab => isAdmin() || (TABS_FOR[S.user] || []).includes(tab);
   const CAN = { verify: ['legal'], decide: ['owner'], pay: ['finance'], claim: ['owner', 'finance'], tracker: ['procurement'], add: ['procurement', 'legal'] };
   const can = what => isAdmin() || (CAN[what] || []).includes(S.user);
@@ -98,6 +98,7 @@
     document.body.classList.toggle('ai-ready', !!fn); document.body.classList.toggle('ai-off', !fn);
     const el = $('#ai-chip'); if (el) { el.textContent = fn ? (ai.via === 'key' ? 'AI ready · your API key' : 'AI ready') : 'Connect AI'; el.className = 'pill chipbtn ' + (fn ? 'ok' : 'warn'); }
     ai.limits = null; if (fn && fn.limits) fn.limits().then(l => { ai.limits = l || {}; }, () => { ai.limits = {}; });
+    if (CS.onAi) CS.onAi();
   }
   const AI_COPY = {
     not_granted: 'AI is switched off for this page. Allow it in the page\'s permissions menu, then reload.',

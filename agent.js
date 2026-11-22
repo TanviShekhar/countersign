@@ -42,7 +42,7 @@
     }
     (S.done[p.itemId] = S.done[p.itemId] || {})[p.action] = { on: S.asOf, by };
     if (undo) { undo.itemId = p.itemId; undo.action = p.action; }
-    addLog({ who: by, cid: p.cid, text: text + (note ? ` (${note})` : '') + '.', reason: p.reason, undo: A.undo ? undo : null, msg: msg ? msg.id : null, auto: by === 'Agent' });
+    addLog({ who: by, cid: p.cid, role: p.itemRole, text: text + (note ? ` (${note})` : '') + '.', reason: p.reason, undo: A.undo ? undo : null, msg: msg ? msg.id : null, auto: by === 'Agent' });
     save();
   }
   function queue(p, from, note) { S.approvals.unshift(Object.assign({ id: uid('ap'), role: ACT[p.action].approver, from, on: S.asOf, status: 'pending', note: note || '' }, p)); save(); }
@@ -75,12 +75,12 @@
     if (S.done[item.id] && S.done[item.id].escalate) return refuse(`Already escalated on ${fmtD(S.done[item.id].escalate.on)}. Nothing more to do until a person acts.`);
     addTask({ role, cid: item.c ? item.c.id : null, from: by, due: item.left != null ? CS.addDays(S.asOf, item.left) : null, title: item.title, detail: reason || item.detail });
     (S.done[item.id] = S.done[item.id] || {}).escalate = { on: S.asOf, by };
-    addLog({ who: by, cid: item.c ? item.c.id : null, text: `escalated to ${ROLE1[role]}: ${item.title}.`, reason, auto: by === 'Agent' }); save();
+    addLog({ who: by, cid: item.c ? item.c.id : null, role, text: `escalated to ${ROLE1[role]}: ${item.title}.`, reason, auto: by === 'Agent' }); save();
     return { status: 'done', text: `Escalated to ${ROLE1[role]}.` };
   }
   function decideApproval(id, ok) {
     const a = S.approvals.find(x => x.id === id); if (!a || a.status !== 'pending') return;
-    if (S.role !== 'all' && S.role !== a.role) { toast(`Only ${ROLE1[a.role]} can decide this. Switch who you are acting as.`); return; }
+    if (!CS.isAdmin() && S.role !== a.role) { toast(`Only ${ROLE1[a.role]} or Admin can decide this.`); return; }
     a.status = ok ? 'approved' : 'rejected'; a.by = who(); a.decidedOn = S.asOf;
     if (ok) execute(a, who(), `proposed by ${a.from === 'Agent' ? 'the agent' : a.from}`);
     else addLog({ who: who(), cid: a.cid, text: `rejected the proposal to ${ACT[a.action].label.toLowerCase()} for ${a.supplier}.` });

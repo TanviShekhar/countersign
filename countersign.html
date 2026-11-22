@@ -367,6 +367,8 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
   .tourdock{top:auto;left:0;right:0;bottom:0;width:auto;max-height:46vh;border-radius:14px 14px 0 0;border-width:1px 0 0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
   body.touring .wrap{margin-right:0;padding-bottom:50vh}
 }
+.askoff{display:flex;gap:10px 16px;justify-content:space-between;align-items:center;flex-wrap:wrap;background:var(--surface-2);border:1px dashed var(--ink-3);border-radius:8px;padding:10px 12px}
+.askoff>div{flex:1 1 320px;min-width:0}
 </style>
 
 <div id="gate" class="gate" hidden></div>
@@ -402,6 +404,7 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
 <div id="aidlg" class="tourleave" hidden><div class="leavebox" role="dialog" aria-label="Connect AI">
   <h2>Connect AI</h2>
   <p class="muted">Inside Claude, AI works with no setup. On a hosted copy of this page, paste a Claude API key to switch on the assistant, the drafts, scan reading and the Claude sweep.</p>
+  <p class="muted sm">This prototype connects to Claude. Another AI provider could be plugged in at the same point.</p>
   <label for="ai-key" class="k">Claude API key</label><input id="ai-key" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key here">
   <label class="chk" for="ai-remember"><input id="ai-remember" type="checkbox"> Keep it for this browser tab until I close it</label>
   <p class="simnote">The key is used from your browser and sent only to the Claude API. Usage is billed to that key. Do not do this on a shared computer.</p>

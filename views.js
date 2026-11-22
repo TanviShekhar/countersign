@@ -254,14 +254,20 @@
   }
 
   /* ---------- ask ---------- */
+  const ASK_QS = ['Which contracts need a decision in the next 30 days, and what happens if we do nothing?', 'Can we still get out of the Nirmal Facility Services contract?', 'Which suppliers handle personal data, and are we covered?', 'Which contracts are billed in foreign currency, and what does each say about tax?', 'Where are we being charged more than the contract allows?', 'How do I cancel the Brightlane renewal correctly?'];
+  /* Recorded answers, so the page shows what an answer looks like when no AI model is connected. */
+  const RECORDED = {
+    [ASK_QS[0]]: 'Two contracts need a decision in the next 30 days. (Recorded on 22 Nov 2026.)\n\n- **Brightlane Software:** notice to stop the renewal must be received by 30 Nov 2026 (repository record). If nothing is done, the subscription renews for another 12 months [C-001 §2], and fees can rise by up to 5% [C-001 §A1-3].\n- **Vantage Analytics:** notice is due by 15 Dec 2026, which is 30 days before the renewal date [C-008 §2]. If nothing is done, it renews for 12 months and the fee can rise by up to 10% [C-008 §3].\n\nOne more is already past its deadline. Nirmal Facility Services needed notice by 1 Nov 2026 (repository record), so it is locked in for another year [C-004 §2].',
+    [ASK_QS[1]]: 'Yes, but not for free. (Recorded on 22 Nov 2026.)\n\n- The deadline to stop the renewal passed on 1 Nov 2026 (repository record), so the contract renews for 12 months [C-004 §2].\n- After the initial term, Vindhya can still end the contract for convenience on six months\' written notice [C-004 §7].\n- That costs an early termination charge equal to two months\' service charges [C-004 §7].\n- The monthly charge is ₹11,40,000 in 2026 and rises by 8% at the start of each renewal term [C-004 §4].\n\nThe contract does not say how notice must be delivered.',
+    [ASK_QS[5]]: 'Send a written notice of non-renewal so that it is received by 30 Nov 2026. (Recorded on 22 Nov 2026.)\n\n- Notice must be given at least 90 days before the term ends [C-001 §2], and the term ends on 28 Feb 2027 [C-001 §OF-2].\n- It must go by email to legal-notices@brightlane.example and by tracked courier to Brightlane\'s legal team in Austin, Texas [C-001 §3].\n- It takes effect only when the courier copy is received [C-001 §3], so allow for delivery time.\n- To keep the contract with fewer seats, the seat reduction needs notice by the same date [C-001 §OF-4].'
+  };
   function vAsk() {
-    const qs = ['Which contracts need a decision in the next 30 days, and what happens if we do nothing?', 'Can we still get out of the Nirmal Facility Services contract?', 'Which suppliers handle personal data, and are we covered?', 'Which contracts are billed in foreign currency, and what does each say about tax?', 'Where are we being charged more than the contract allows?', 'How do I cancel the Brightlane renewal correctly?'];
     return `
     <div class="head"><h1>Ask Countersign</h1><p class="sub">Ask a question in plain words. Answers come only from the contracts on file, and each one links to the clause it relies on.</p></div>
     <section class="panel chatpanel">
-      <div class="ai-note">AI answers need a connection: open this page in Claude, or select Connect AI at the top. Search and the checks on the other tabs work without it.</div>
+      <div id="askmode"></div>
       <div id="chat" class="chat" aria-live="polite"></div>
-      <div class="suggest" id="suggest">${qs.map(q => `<button class="chip" data-act="ask-chip" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="suggest" id="suggest"></div>
       <form id="askform" class="askform">
         <label class="vh" for="scope">Which contracts to search</label>
         <select id="scope"><option value="all">All contracts</option>${contracts().map(c => `<option value="${c.id}"${S.scope === c.id ? ' selected' : ''}>${esc(c.supplier)}</option>`).join('')}</select>
@@ -270,21 +276,33 @@
         <button class="btn primary" type="submit" id="askbtn">Ask</button>
         <button class="btn" type="button" data-act="ai-stop" id="askstop" hidden>Stop</button>
       </form>
-      <p class="muted sm">${CS.src('live')} Check the cited clause before acting on an answer. This is not legal or tax advice.</p>
+      <p class="muted sm">Check the cited clause before acting on an answer. This is not legal or tax advice.</p>
     </section>`;
   }
   function paintChat() {
     const box = $('#chat'); if (!box) return;
-    box.innerHTML = S.chat.map((m, i) => m.role === 'user'
+    const live = !!ai.sample, mode = $('#askmode'), sg = $('#suggest');
+    if (mode) mode.innerHTML = live
+      ? `<p class="okline">${CS.src('live')} An AI model is connected${ai.via === 'key' ? ' with your API key' : ''}. Ask anything about the contracts on file.</p>`
+      : `<div class="askoff"><div><strong>Showing recorded examples.</strong> <span class="muted">They show what an answer looks like. Questions tagged "Recorded AI" below play a saved answer. For live answers to any question, connect an AI model.</span></div><button class="btn sm primary" data-act="ai-connect">Connect an AI model</button></div>`;
+    /* With no AI and no conversation yet, one recorded exchange stands in as the placeholder. */
+    const msgs = S.chat.length ? S.chat : live ? [] : [{ role: 'user', content: ASK_QS[5] }, { role: 'assistant', content: RECORDED[ASK_QS[5]], recorded: true }];
+    box.innerHTML = msgs.map((m, i) => m.role === 'user'
       ? `<div class="msg user"><div class="bubble">${esc(m.content)}</div></div>`
-      : `<div class="msg bot"><div class="bubble" data-i="${i}">${m.pending && !m.content ? '<span class="thinking">Reading the contracts…</span>' : md(m.content)}${m.error ? `<p class="err">${esc(m.error)}</p>` : ''}</div></div>`).join('');
-    const sg = $('#suggest'); if (sg) sg.hidden = S.chat.length > 0;
+      : `<div class="msg bot"><div class="bubble" data-i="${i}">${m.recorded ? `<div>${CS.src('rec')}</div>` : ''}${m.pending && !m.content ? '<span class="thinking">Reading the contracts…</span>' : md(m.content)}${m.error ? `<p class="err">${esc(m.error)}</p>` : ''}</div></div>`).join('');
+    if (sg) sg.innerHTML = ASK_QS.map(q => `<button class="chip" data-act="ask-chip" data-q="${esc(q)}">${esc(q)}${!live && RECORDED[q] ? ' ' + CS.src('rec') : ''}</button>`).join('');
     const stop = $('#askstop'), btn = $('#askbtn'); if (stop) stop.hidden = !S.busy; if (btn) btn.disabled = S.busy;
     box.scrollTop = box.scrollHeight;
   }
   async function ask(q) {
-    q = String(q || '').trim(); if (!q || S.busy) return; if (!needAi()) return;
-    const hist = S.chat.filter(m => !m.error && m.content).slice(-6).map(m => ({ role: m.role, content: m.content }));
+    q = String(q || '').trim(); if (!q || S.busy) return;
+    if (!ai.sample) {
+      const rec = RECORDED[q];
+      if (!rec) { toast('That question needs a live AI model. Connect one, or try a question tagged "Recorded AI".'); return; }
+      S.chat.push({ role: 'user', content: q }, { role: 'assistant', content: rec, recorded: true }); S.pendingQ = '';
+      const inp0 = $('#askq'); if (inp0) inp0.value = ''; paintChat(); return;
+    }
+    const hist = S.chat.filter(m => !m.error && m.content && !m.recorded).slice(-6).map(m => ({ role: m.role, content: m.content }));
     const bot = { role: 'assistant', content: '', pending: true };
     S.chat.push({ role: 'user', content: q }, bot); S.busy = true; S.pendingQ = '';
     const inp = $('#askq'); if (inp) inp.value = '';

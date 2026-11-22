@@ -113,6 +113,7 @@
     if (t.id === 'asof' && isIso(t.value)) { S.asOf = t.value; render(); }
     if (t.id === 'scope') S.scope = t.value;
     if (t.id === 'addfile' && t.files && t.files[0]) CS.handleFile(t.files[0]);
+    if (t.dataset && (t.dataset.pol || t.dataset.lim) && !CS.isAdmin()) return;
     if (t.dataset && t.dataset.pol) { const k = t.dataset.pol; S.policy[k] = Object.assign({}, CS.policy(k), { mode: t.value }); save(); toast(`Rule updated: ${CS.ACT[k].label.toLowerCase()} is now "${t.options[t.selectedIndex].text}".`); }
     if (t.dataset && t.dataset.lim) { const k = t.dataset.lim, n = Math.max(0, Number(t.value) || 0); S.policy[k] = Object.assign({}, CS.policy(k), { limit: n }); save(); toast(`Limit updated to ${inrC(n)}.`); }
   });
@@ -120,6 +121,8 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.draft) CS.closeDrawer(); });
   window.addEventListener('hashchange', () => render());
 
+  /* When AI connects or drops, redraw the two screens that show its state. */
+  CS.onAi = () => { const n = route().name; if (S.user && (n === 'ask' || n === 'agent') && !(S.run && S.run.busy) && !S.busy) render(); };
   CS.renderGate();
   render();
   try {

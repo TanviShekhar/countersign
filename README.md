@@ -34,6 +34,12 @@ Every account uses the password `test`.
 There is one sign-in page. The details are filled in already: pick a person from the drop-down and
 select Sign in. An address such as `#login-finance` opens the page with that person selected.
 
+Each team also has its own Agent tab, covering only that team's items and approvals. Only Admin can
+change the agent's rules.
+
+With no AI connected, the Ask tab shows recorded example answers so you can see what a reply looks
+like. Select **Connect an AI model** there for live answers.
+
 ## Running the agent sweep when hosted
 
 The sweep has two ways to decide, chosen on the Agent tab:
