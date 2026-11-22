@@ -134,7 +134,8 @@
   function titleCase(text, state) {
     return text.split(/(\s+)/).map(tok => { if (!tok.trim()) return tok;
       const force = state.first || /[,;]$/.test(tok); state.first = /[:?.!]$/.test(tok);
-      return tok.split('-').map((part, i) => capPart(part, force || i > 0)).join('-'); }).join('');
+      const parts = tok.split('-'); /* every part of a hyphenated word is capitalised: To-Do, One-Off */
+      return parts.map(part => capPart(part, force || parts.length > 1)).join('-'); }).join('');
   }
   function capHeadings() {
     document.querySelectorAll('h1, h2, h3').forEach(h => { const state = { first: true }, walk = document.createTreeWalker(h, NodeFilter.SHOW_TEXT); let n;
