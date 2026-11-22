@@ -31,7 +31,8 @@ Every account uses the password `test`.
 | Procurement (Yash Patil) | `procurement` | Renegotiations, coverage gaps, missing documents, renewals, the Excel tracker. |
 | Business owner (Anuj Shinde) | `owner` | Renewal decisions, service credits, the contracts he owns. |
 
-Each sign-in page has its own address, for example `#login-finance`.
+There is one sign-in page. The details are filled in already: pick a person from the drop-down and
+select Sign in. An address such as `#login-finance` opens the page with that person selected.
 
 ## Running the agent sweep when hosted
 

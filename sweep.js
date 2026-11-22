@@ -177,7 +177,7 @@ When every item has been handled, reply with a summary of at most four sentences
       ${busy ? '<div class="bar ok runprog"><span id="runbar" style="width:0%"></span></div>' : ''}
       <p id="runstatus" class="thinking">${busy ? (eng === 'claude' ? 'Claude is reading the open items. This can take a minute.' : 'Applying the rules…') : ''}</p>
     </section>
-    ${run ? `<section class="panel"><div class="panel-head"><h2>What the sweep did</h2>${pill('mute', run.engine === 'claude' ? 'Decided by Claude' : 'Decided by built-in rules')}</div>
+    ${run ? `<section class="panel"><div class="panel-head"><h2>What the sweep did</h2>${CS.src(run.engine === 'claude' ? 'live' : 'rule')}</div>
       ${run.summary ? `<p class="lead">${esc(run.summary)}</p>` : ''}${run.err ? `<p class="err">${esc(run.err)}</p>` : ''}<div id="runres">${resultsHtml(run)}</div></section>` : ''}
     <section class="panel"><div class="panel-head"><div><h2>${run ? 'Still open for the next sweep' : 'What the next sweep will do'}</h2><p class="muted sm">Worked out from the rules below, before anything runs. Change a rule and this list changes with it.</p></div>${pill(n ? 'info' : 'ok', plural(n, 'open item'))}</div>${previewHtml()}</section>
     <div class="split">

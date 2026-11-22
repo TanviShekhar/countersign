@@ -4,7 +4,10 @@
   const CS = window.CS;
   const { D, $, isIso, fmtD, S, save, resetState, byId, ROLE1, who, addLog, addTask, renewal, invoiceChecks, cLink, verifiedKey, findClause, toInr, inrC, toast, setAi } = CS;
 
-  const TABS = [['overview', 'Overview'], ['contracts', 'Contracts'], ['renewals', 'Renewals'], ['invoices', 'Invoice check'], ['ask', 'Ask'], ['add', 'Add a contract'], ['agent', 'Agent'], ['value', 'Value'], ['case', 'The case']];
+  /* Six top tabs. Renewals, the invoice check and adding a contract sit inside Contracts. */
+  const TOP = [['overview', 'Overview'], ['contracts', 'Contracts'], ['ask', 'Ask'], ['agent', 'Agent'], ['value', 'Value'], ['case', 'The case']];
+  const SUB = [['contracts', 'All contracts'], ['renewals', 'Renewals'], ['invoices', 'Invoice check'], ['add', 'Add a contract']];
+  const SUBK = SUB.map(x => x[0]), TABS = TOP.concat(SUB.slice(1));
   function route() { const h = (location.hash || '').slice(1); if (h.startsWith('contract-')) return { name: 'contract', id: h.slice(9).toUpperCase() }; if (h.startsWith('item-')) return { name: 'item', id: h.slice(5).toUpperCase() }; return { name: TABS.some(t => t[0] === h) ? h : 'overview' }; }
   let lastRoute = '';
   function render(scrollClause) {
@@ -13,10 +16,12 @@
     if (rt.name !== 'contract' && rt.name !== 'item' && !CS.canSee(rt.name)) { location.hash = '#overview'; return; }
     const wh = $('#whoami'); if (wh && S.user) wh.textContent = CS.USERS[S.user].name === 'Admin' ? 'Admin' : `${CS.USERS[S.user].name} · ${CS.USERS[S.user].label}`;
     const tb = $('#tourbtn'); if (tb) tb.hidden = !CS.isAdmin();
-    $('#tabs').innerHTML = TABS.filter(([k]) => CS.canSee(k)).map(([k, label]) => { const n = k === 'agent' ? S.approvals.filter(a => a.status === 'pending').length : 0;
-      return `<a href="#${k}" class="tab${rt.name === k || (rt.name === 'contract' && k === 'contracts') || (rt.name === 'item' && k === 'overview') ? ' on' : ''}"${rt.name === k ? ' aria-current="page"' : ''}>${label}${n ? ` <span class="count">${n}</span>` : ''}</a>`; }).join('');
+    $('#tabs').innerHTML = TOP.filter(([k]) => CS.canSee(k)).map(([k, label]) => { const n = k === 'agent' ? S.approvals.filter(a => a.status === 'pending').length : 0;
+      return `<a href="#${k}" class="tab${rt.name === k || (rt.name === 'contract' && k === 'contracts') || (rt.name === 'item' && k === 'overview') || (k === 'contracts' && SUBK.includes(rt.name)) ? ' on' : ''}"${rt.name === k ? ' aria-current="page"' : ''}>${label}${n ? ` <span class="count">${n}</span>` : ''}</a>`; }).join('');
     const view = $('#view'), V = { overview: CS.vOverview, contracts: CS.vContracts, renewals: CS.vRenewals, invoices: CS.vInvoices, ask: CS.vAsk, add: CS.vAdd, agent: CS.vAgent, value: CS.vValue, case: CS.vCase };
-    view.innerHTML = rt.name === 'contract' ? CS.vContract(rt.id) : rt.name === 'item' ? CS.vItem(rt.id) : V[rt.name]();
+    const subs = SUB.filter(([k]) => CS.canSee(k));
+    const subnav = SUBK.includes(rt.name) && subs.length > 1 ? `<nav class="subnav" aria-label="Contracts sections">${subs.map(([k, l]) => `<a href="#${k}" class="chip${rt.name === k ? ' on' : ''}"${rt.name === k ? ' aria-current="page"' : ''}>${l}</a>`).join('')}</nav>` : '';
+    view.innerHTML = rt.name === 'contract' ? CS.vContract(rt.id) : rt.name === 'item' ? CS.vItem(rt.id) : subnav + V[rt.name]();
     if (rt.name === 'contracts') CS.paintList();
     if (rt.name === 'ask') CS.paintChat();
     if (rt.name === 'agent') CS.paintRun();

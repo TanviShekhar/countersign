@@ -339,6 +339,34 @@ tr.undone td:nth-child(3){color:var(--ink-3);text-decoration:line-through}
   .clause{grid-template-columns:40px minmax(0,1fr)}
 }
 @media (prefers-reduced-motion:no-preference){ .btn,.chip,.tab{transition:border-color .12s,color .12s,background-color .12s} }
+
+/* --- flow update: smaller welcome headline, sign-in, source labels, sub-navigation, to-do split, case page order, tour panel --- */
+.gate-in h1,.gate-in.narrow h1{font-size:clamp(19px,2vw,24px);line-height:1.3;max-width:36ch}
+.gate-in.wide{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);gap:22px;align-items:start;width:min(1080px,100%)}
+.gate-main{display:flex;flex-direction:column;gap:16px;min-width:0} .narrowcol{max-width:440px}
+.gate-cols ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.gate-note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;font-size:13px}
+.gate-note.warm{background:var(--surface-2)} .gate-note h2{font-size:15px}
+.gate-form select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;color:inherit}
+.choice.rec{border-color:var(--accent)} .choice .k{color:var(--accent)}
+.pickgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px} .pick{width:min(560px,100%)}
+.srcl{display:inline-block;font:600 10px var(--body);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--line);border-radius:3px;padding:0 5px;vertical-align:1px;white-space:nowrap;background:var(--surface)}
+.subnav{display:flex;gap:6px;flex-wrap:wrap} .subnav .chip{text-decoration:none}
+.wrows{display:flex;flex-direction:column}
+.wrow{display:flex;flex-direction:column;gap:2px;padding:10px 0;border-top:1px solid var(--line);text-decoration:none;color:inherit} .wrow:first-child{border-top:0}
+.wrow:hover strong{color:var(--accent)} .wwho{font-size:12.5px;color:var(--accent);font-weight:500}
+.item #happened{grid-column:1;grid-row:1} .item #steps{grid-column:1;grid-row:2} .item #proof{grid-column:2;grid-row:1 / span 2}
+.tourdock{top:0;right:0;bottom:0;width:340px;border-radius:0;border-width:0 0 0 1px;border-color:var(--line);overflow:auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));box-shadow:-6px 0 24px rgba(8,12,20,.10)}
+body.touring .wrap{margin-right:340px;padding-bottom:48px}
+.td-prog{display:flex;gap:3px} .td-prog i{flex:1;height:4px;border-radius:2px;background:var(--line)} .td-prog i.on{background:var(--accent)}
+.td-text{font-size:14.5px} .td-btns{margin-top:4px}
+.story{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface-2)} .story ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:13px}
+@media (max-width:900px){
+  .gate-in.wide{grid-template-columns:minmax(0,1fr)}
+  .item #happened,.item #steps,.item #proof{grid-column:auto;grid-row:auto} .item #proof{order:2} .item #steps{order:3}
+  .tourdock{top:auto;left:0;right:0;bottom:0;width:auto;max-height:46vh;border-radius:14px 14px 0 0;border-width:1px 0 0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  body.touring .wrap{margin-right:0;padding-bottom:50vh}
+}
 </style>
 
 <div id="gate" class="gate" hidden></div>

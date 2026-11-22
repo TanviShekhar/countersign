@@ -35,7 +35,7 @@
     <div class="head"><h1>${adm ? 'What needs attention' : esc(CS.USERS[S.user].name.split(' ')[0]) + "'s queue"}</h1><p class="sub">${esc(D.company)} supplier contracts as of ${fmtD(S.asOf)}. Every item is worked out from the contract terms, invoices and payment records. Totals are in rupees. ${CS.asm('A1')} ${CS.asm('A2')}</p></div>
     ${adm ? `<div class="kpis">
       <div class="tile"><div class="k">Decisions due in 30 days</div><div class="v">${due}</div><div class="s">Renewals and expiries</div></div>
-      <div class="tile"><div class="k">Recoverable now</div><div class="v">${inrC(recover)}</div><div class="s">Overbilling, unclaimed credits and rebates</div></div>
+      <div class="tile"><div class="k">Recoverable now ${CS.src('calc')}</div><div class="v">${inrC(recover)}</div><div class="s">Overbilling, unclaimed credits and rebates</div></div>
       <div class="tile"><div class="k">Under contract</div><div class="v">${inrC(inForce.reduce((s, c) => s + toInr(c, c.annualValue || 0), 0))}</div><div class="s">${plural(inForce.length, 'contract')} in force, yearly value</div></div>
       <div class="tile"><div class="k">Paid with no contract</div><div class="v">${inrC(gapSum)}</div><div class="s">${plural(gaps.length, 'supplier')}, last 12 months</div></div>
     </div>
@@ -59,9 +59,9 @@
           </a>`; }).join('') || '<p class="empty">Nothing in this group needs action.</p>'}</div>
       </section>
       </div>
-      ${adm || S.user === 'procurement' ? `<aside class="side">
+      <aside class="side">${CS.waitingHtml()}${adm || S.user === 'procurement' ? `
         <section class="panel">
-          <h2>Contract coverage</h2>
+          <h2>Contract coverage</h2>${CS.src('calc')}
           <p class="muted">Suppliers paid in the last 12 months, checked against the repository.</p>
           <div class="covbar" role="img" aria-label="${Math.round(cov)}% of spend is covered by a contract on file"><span style="width:${cov.toFixed(1)}%"></span></div>
           <div class="covkey"><span><i class="sw a"></i>${Math.round(cov)}% with a contract · ${inrC(tot - gapSum)}</span><span><i class="sw b"></i>${Math.round(100 - cov)}% without · ${inrC(gapSum)}</span></div>
@@ -70,7 +70,7 @@
           </tbody></table>
           <a class="btn" href="#add">Add a contract</a>
         </section>
-      </aside>` : ''}
+      ` : ''}</aside>
     </div>`;
   }
 
@@ -194,7 +194,7 @@
       ${c.risks && c.risks.length ? `<section class="panel"><h2>Points to watch</h2><ul class="risks">${c.risks.map(k => `<li>${pill(k.level === 'high' ? 'crit' : k.level === 'medium' ? 'warn' : 'mute', k.level)}<span>${esc(k.text)} ${findClause(c, k.clause) ? `<a class="cite" href="${cLink(c)}" data-act="cite" data-id="${c.id}" data-clause="${esc(k.clause)}">§${esc(k.clause)}</a>` : ''}</span></li>`).join('')}</ul></section>` : ''}
       ${meters.length ? `<section class="panel"><h2>Spend against the contract</h2>${meters.join('')}</section>` : ''}
     </div>` : ''}
-    ${sla.length ? `<section class="panel flush"><div class="pad"><h2>Service levels ${CS.asm('A5')}</h2></div><div class="scroll"><table class="t"><thead><tr><th>Measure</th><th>Month</th><th class="num">Target</th><th class="num">Actual</th><th>Result</th><th class="num">Credit due</th><th>Claim by</th><th></th></tr></thead><tbody>
+    ${sla.length ? `<section class="panel flush"><div class="pad"><h2>Service levels ${CS.asm('A5')} ${CS.src('sample')}</h2></div><div class="scroll"><table class="t"><thead><tr><th>Measure</th><th>Month</th><th class="num">Target</th><th class="num">Actual</th><th>Result</th><th class="num">Credit due</th><th>Claim by</th><th></th></tr></thead><tbody>
       ${sla.map(s => `<tr><td>${esc(s.sla.name)} <a class="cite" href="${cLink(c)}" data-act="cite" data-id="${c.id}" data-clause="${esc(s.sla.clause)}">§${esc(s.sla.clause)}</a></td><td class="nowrap">${monthName(s.h.m)}</td><td class="num">${s.sla.target}${s.sla.unit}</td><td class="num">${s.actual}${s.sla.unit}</td><td>${s.met ? pill('ok', 'Met') : pill('crit', 'Missed')}</td><td class="num">${s.credit ? cm(c, s.credit) : '—'}</td><td class="nowrap">${s.credit ? fmtD(s.claimBy) + ' ' + (s.claimed ? pill('ok', 'Claimed') : s.left < 0 ? pill('mute', 'Window closed') : dueChip(s.left)) : '—'}</td><td class="nowrap">${s.credit && (s.left >= 0 || s.claimed) ? `<button class="btn xs" data-act="claim" data-k="${esc(s.key)}">${s.claimed ? 'Undo' : 'Mark claimed'}</button> ${s.claimed ? '' : `<button class="btn xs" data-act="draft" data-kind="claim" data-id="${c.id}" data-extra="${esc(s.key)}">${aiTag} Draft claim</button>`}` : ''}</td></tr>`).join('')}
     </tbody></table></div></section>` : ''}
     ${acts.length ? `<section class="panel"><h2>Activity on this contract</h2><ul class="acts">${acts.map(l => `<li><span class="muted sm nowrap">${fmtD(l.on)}</span><span><strong>${esc(l.who)}</strong> ${esc(l.text)}</span></li>`).join('')}</ul></section>` : ''}
@@ -236,7 +236,7 @@
     const ks = invoiceChecks(), over = ks.reduce((s, k) => s + toInr(k.c, k.over), 0);
     const label = { match: ['ok', 'Matches contract'], variance: ['crit', 'Above contract price'], outofterm: ['crit', 'Contract has ended'], nocontract: ['warn', 'No contract on file'], unchecked: ['mute', 'No fixed price to compare'] };
     return `
-    <div class="head"><h1>Invoice check</h1><p class="sub">Each invoice line is compared with the price in the contract before it is paid, in the contract's own currency and before GST ${CS.asm('A3')}. ${plural(ks.length, 'invoice')} on hand, ${inrC(over)} above contract prices.</p></div>
+    <div class="head"><h1>Invoice check</h1><p class="sub">Each invoice line is compared with the price in the contract before it is paid, in the contract's own currency and before GST ${CS.asm('A3')} ${CS.src('sample')}. ${plural(ks.length, 'invoice')} on hand, ${inrC(over)} above contract prices.</p></div>
     <div class="ilist">${ks.map(k => { const [cls, text] = label[k.status], c = k.c, open = S.open[k.inv.id] != null ? S.open[k.inv.id] : k.status === 'variance';
       const msmeLeft = k.msmeDue ? diff(k.msmeDue, S.asOf) : null;
       return `<section class="panel flush inv ${cls}">
@@ -257,7 +257,7 @@
   function vAsk() {
     const qs = ['Which contracts need a decision in the next 30 days, and what happens if we do nothing?', 'Can we still get out of the Nirmal Facility Services contract?', 'Which suppliers handle personal data, and are we covered?', 'Which contracts are billed in foreign currency, and what does each say about tax?', 'Where are we being charged more than the contract allows?', 'How do I cancel the Brightlane renewal correctly?'];
     return `
-    <div class="head"><h1>Ask the contracts</h1><p class="sub">Ask a question in plain words. Answers come only from the contracts on file, and each one links to the clause it relies on.</p></div>
+    <div class="head"><h1>Ask Countersign</h1><p class="sub">Ask a question in plain words. Answers come only from the contracts on file, and each one links to the clause it relies on.</p></div>
     <section class="panel chatpanel">
       <div class="ai-note">AI answers need a connection: open this page in Claude, or select Connect AI at the top. Search and the checks on the other tabs work without it.</div>
       <div id="chat" class="chat" aria-live="polite"></div>
@@ -270,7 +270,7 @@
         <button class="btn primary" type="submit" id="askbtn">Ask</button>
         <button class="btn" type="button" data-act="ai-stop" id="askstop" hidden>Stop</button>
       </form>
-      <p class="muted sm">Check the cited clause before acting on an answer. This is not legal or tax advice.</p>
+      <p class="muted sm">${CS.src('live')} Check the cited clause before acting on an answer. This is not legal or tax advice.</p>
     </section>`;
   }
   function paintChat() {

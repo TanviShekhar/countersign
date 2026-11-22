@@ -78,6 +78,8 @@
   const workdaysBefore = (s, n) => { let t = d(s); while (n > 0) { t -= DAY; const wd = new Date(t).getUTCDay(); if (wd !== 0 && wd !== 6) n--; } return iso(t); };
   /* 5 points for each month of billing still ahead that an unconfirmed term affects, capped at 20. */
   const legalPriority = until => { if (!isIso(until) || d(until) < d(S.asOf)) return 0; const a = new Date(d(S.asOf)), b = new Date(d(until)); return Math.min(20, 5 * ((b.getUTCFullYear() - a.getUTCFullYear()) * 12 + b.getUTCMonth() - a.getUTCMonth() + 1)); };
+  /* Small labels that say where a figure came from. */
+  const src = k => `<span class="srcl">${{ calc: 'Calculated', sample: 'Sample data', rec: 'Recorded AI', live: 'Live AI', rule: 'Rule-based' }[k]}</span>`;
   const asm = id => `<a class="asm" href="#case" data-act="asm" data-id="${id}" title="Assumption ${id}: select to read it">${id}</a>`;
   const toCsv = rows => rows.map(r => r.map(v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }).join(',')).join('\r\n');
   let dl = null;
@@ -366,7 +368,7 @@ Answer using ONLY the contracts and repository records below.
 
   Object.assign(CS, { D, $, esc, DAY, MON, isIso, d, iso, addDays, addMonthsEnd, diff, fmtD, monthName, plural,
     CUR, curOf, fxRate, cm, cm2, toInr, inr, inrC, both,
-    S, save, resetState, uid, contracts, byId, ownerOf, norm, matchSupplier, ROLES, ROLE1, STAFF, who, USERS, isAdmin, canSee, can, addLog, addTask, workdaysBefore, legalPriority, asm, toCsv, download,
+    S, save, resetState, uid, contracts, byId, ownerOf, norm, matchSupplier, ROLES, ROLE1, STAFF, who, USERS, isAdmin, canSee, can, addLog, addTask, workdaysBefore, legalPriority, asm, src, toCsv, download,
     ai, setAi, aiCopy, aiGone, needAi,
     renewal, statusOf, slaRows, checkInvoice, invoiceChecks, paymentRows, cLink, verifiedKey, isVerified, clauseConfirmed, findClause, attention, northStar,
     pill, dueChip, aiTag, toast, md, docText, facts, corpus, RULES });

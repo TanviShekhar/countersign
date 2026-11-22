@@ -5,7 +5,7 @@
   const { D, $, esc, isIso, d, diff, fmtD, plural, CUR, curOf, fxRate, cm, cm2, toInr, inr, inrC, both, S, save, uid, contracts, byId, ownerOf, ROLE1, who, addLog, addTask,
     workdaysBefore, legalPriority, asm, toCsv, download, renewal, statusOf, slaRows, invoiceChecks, cLink, verifiedKey, isVerified, findClause, attention, pill, dueChip, toast } = CS;
 
-  const STAGES = ['Found', 'Checked by Legal', 'In progress', 'Sent to supplier', 'Confirmed by Finance'];
+  const STAGES = ['Found', 'Checked by Legal', 'In progress', 'Sent to supplier', 'Confirmed by Finance', 'Fixed at source'];
   const GST = 18;
   const INV_A = 'SSS/26-27/0412', INV_D = 'STR-55102', SLA_C = 'C-003|On-time delivery|2026-09';
   const CASE_OF = { ['inv|' + INV_A]: 'A', 'renew|C-001': 'B', 'notice|C-001': 'B', ['credit|' + SLA_C]: 'C', ['inv|' + INV_D]: 'D' };
@@ -27,16 +27,18 @@
       { id: 'A2', role: 'finance', title: 'Check the billed roles against the timesheets', detail: 'The AI compared the Forklift Operator days billed with the October timesheets and found 22 days worked by a Warehouse Associate.', done: !!S.steps.A2, lock, btns: [{ label: 'Accept the role check', fn: 'step', arg: 'A2' }] },
       { id: 'A3', role: 'finance', title: 'Hold the difference and send the dispute', detail: `Hold ${cm(c, k.over)} of the invoice, pay the rest on time, and ask Sahyadri for a credit note.`, done: k.disputed, lock, btns: [{ label: 'Hold and send the dispute', fn: 'dispute', arg: INV_A }] },
       { id: 'A5', role: 'supplier', title: 'Issue the credit note', detail: `Sahyadri's billing lead issues a credit note for ${cm(c, k.over)} plus GST.`, done: !!S.steps.A5, lock, btns: [{ label: 'Issue the credit note', fn: 'step', arg: 'A5' }] },
-      { id: 'A6', role: 'finance', title: 'Confirm the credit note has arrived', detail: 'This closes the case and counts the amount as confirmed.', done: !!S.confirmed.A, lock, btns: [{ label: 'Confirm and close', fn: 'confirm', arg: 'A' }] }
+      { id: 'A6', role: 'finance', title: 'Confirm the credit note has arrived', detail: 'This counts the amount as confirmed.', done: !!S.confirmed.A, lock, btns: [{ label: 'Confirm the credit note', fn: 'confirm', arg: 'A' }] },
+      { id: 'A7', role: 'procurement', title: 'Correct the rate in the Excel tracker', detail: 'The tracker still says ₹980. Fixing it at the source stops the next person relying on the wrong rate.', done: !!S.trackerFixed['C-002'], lock, btns: [{ label: 'Correct the tracker row', fn: 'fixRow', arg: 'C-002' }] },
+      { id: 'A8', role: 'finance', title: "Check that November's invoice uses ₹1,005", detail: 'The case closes only when the next invoice comes in at the right rate, so the overcharge does not repeat.', done: !!S.steps.A8, lock, btns: [{ label: 'November is billed correctly', fn: 'step', arg: 'A8' }] }
     ];
     const a4 = { id: 'A4', role: 'owner', side: true, title: 'Travel charge of ₹38,500: confirm nobody approved it', detail: 'The rates are all-inclusive, so travel cannot be billed. Confirm no one agreed otherwise in writing.', done: !!S.steps.A4, lock, btns: [{ label: 'Nobody approved it', fn: 'step', arg: 'A4' }] };
-    return { id: 'A', c, title: 'Sahyadri Staffing billed the wrong rate, the wrong role and a travel charge', short: 'Staffing invoice for October', steps, side: [a4],
-      stage: S.confirmed.A ? 4 : k.disputed ? 3 : S.steps.A2 ? 2 : legal ? 1 : 0, closed: !!S.confirmed.A, priority: legal ? null : pr,
+    return { id: 'A', c, happened: 'Sahyadri\'s October invoice bills warehouse associates at ₹1,030 a day. Amendment No. 2 says ₹1,005 from 1 October, and the Excel tracker still says ₹980. The same invoice bills 22 forklift days that the timesheets show were warehouse work, and a ₹38,500 travel charge the contract does not allow.', title: 'Sahyadri Staffing billed the wrong rate, the wrong role and a travel charge', short: 'Staffing invoice for October', steps, side: [a4],
+      stage: S.confirmed.A && S.trackerFixed['C-002'] ? 5 : S.confirmed.A ? 4 : k.disputed ? 3 : S.steps.A2 ? 2 : legal ? 1 : 0, closed: !!S.confirmed.A && !!S.steps.A8, priority: legal ? null : pr,
       oneOff: { c, amt: k.over, note: legal ? '' : 'if the rate is ₹1,005' }, yearly: null,
       repeat: { c, amt: rateOver * n, note: `${plural(n, 'more monthly invoice')} at the wrong rate, to the end of the term` }, gst: k.over * GST / 100,
       proof: () => `<h3>What the contract says</h3>${clauseBox(c, '3')}${clauseBox(c, 'A2-1')}
         <h3>The invoice against the contract ${asm('A3')}</h3>${table(['Line', 'Billed', 'Per contract', 'Difference'], k.lines.map(l => [l.desc, cm2(c, l.billedAmt), l.expected == null ? '—' : cm2(c, l.expected), l.variance > 0.005 ? '+' + cm2(c, l.variance) : 'None']).concat([['Total to dispute, before GST', '', '', cm2(c, k.over)]]))}
-        <div class="recorded"><div class="k">Recorded AI output · role check ${asm('A9')} ${asm('A4')}</div><p>I compared the 620 Forklift Operator person-days on invoice ${INV_A} with the October timesheets signed by Anuj Shinde. One worker, S. Gaikwad, appears on the timesheets as a Warehouse Associate for all 22 of his shifts, but is billed at the Forklift Operator rate. At ₹1,250 against ₹1,005 a day, that is ₹245 × 22 = ₹5,390 overbilled. The other 598 person-days match. I am confident about the mismatch. The amount depends on the ₹1,005 rate in Amendment No. 2, which a person should confirm.</p></div>
+        <div class="recorded"><div class="k">Role check ${CS.src('rec')} ${asm('A9')} ${asm('A4')}</div><p>I compared the 620 Forklift Operator person-days on invoice ${INV_A} with the October timesheets signed by Anuj Shinde. One worker, S. Gaikwad, appears on the timesheets as a Warehouse Associate for all 22 of his shifts, but is billed at the Forklift Operator rate. At ₹1,250 against ₹1,005 a day, that is ₹245 × 22 = ₹5,390 overbilled. The other 598 person-days match. I am confident about the mismatch. The amount depends on the ₹1,005 rate in Amendment No. 2, which a person should confirm.</p></div>
         <p class="muted sm">Legal priority ${pr} of 20: the rate affects ${plural(n, 'more monthly invoice')}, at 5 points a month, capped at 20.</p>`,
       csv: () => [['Line', 'Billed', 'Per contract', 'Difference', 'Clause']].concat(k.lines.map(l => [l.desc, l.billedAmt, l.expected == null ? '' : l.expected, l.variance, l.clause || ''])) };
   }
@@ -55,10 +57,11 @@
       { id: 'B2', role: 'procurement', title: 'Record the renegotiated terms', detail: `Brightlane quoted ${cm2(c, quote)} a seat for ${c.usage.paid} seats. Enter what was agreed.`, done: !!out, due: dispatchBy,
         extra: `<span class="rn"><label for="rn-seats">Seats</label><input id="rn-seats" type="number" min="1" value="380"><label for="rn-price">US$ per seat a month</label><input id="rn-price" type="number" min="0" step="0.01" value="54.00"></span>`, btns: [{ label: 'Record the outcome', fn: 'outcome', arg: 'B' }] },
       { id: 'B3', role: 'owner', title: 'Confirm the new order form is signed', detail: 'This closes the case and counts the yearly saving as confirmed.', done: !!S.confirmed.B, btns: [{ label: 'Confirm and close', fn: 'confirm', arg: 'B' }] });
+    if (choice === 'terminate' || choice === 'renegotiate') steps.push({ id: 'B9', role: 'procurement', title: 'Correct the Brightlane row in the Excel tracker', detail: 'The tracker shows the old seats and price and a 60-day notice period. Fixing it closes the case.', done: !!S.trackerFixed['C-001'], btns: [{ label: 'Correct the tracker row', fn: 'fixRow', arg: 'C-001' }] });
     const saving = out ? quoteYear - out.seats * out.price * 12 : 0;
-    const closed = choice === 'renew' || !!S.confirmed.B;
-    return { id: 'B', c, title: 'Brightlane renews itself unless notice arrives in time', short: 'CRM renewal', steps, side: [],
-      stage: S.confirmed.B ? 4 : choice === 'renew' ? 4 : choice === 'terminate' ? (sent ? 3 : S.steps.B2 ? 1 : 0) : choice === 'renegotiate' ? (out ? 3 : 2) : 0, closed,
+    const fixed = !!S.trackerFixed['C-001'], closed = choice === 'renew' || (!!S.confirmed.B && fixed);
+    return { id: 'B', c, happened: `The Brightlane subscription renews itself for 12 months unless a notice reaches Austin by ${fmtD(deadline)}. Brightlane has quoted a ${c.uplift.pct}% rise, and ${c.usage.paid - c.usage.active} of the ${c.usage.paid} seats are not being used.`, title: 'Brightlane renews itself unless notice arrives in time', short: 'CRM renewal', steps, side: [],
+      stage: S.confirmed.B && fixed ? 5 : S.confirmed.B ? 4 : choice === 'renew' ? 5 : choice === 'terminate' ? (sent ? 3 : S.steps.B2 ? 1 : 0) : choice === 'renegotiate' ? (out ? 3 : 2) : 0, closed,
       closedNote: choice === 'renew' ? 'Renewed as quoted. No saving is counted.' : choice === 'terminate' && closed ? 'Not renewed. No saving is counted.' : '',
       oneOff: null, yearly: choice === 'renegotiate' && out ? { c, amt: saving } : null, yearlyNote: choice === 'renegotiate' ? '' : 'Counts only if renegotiated',
       proof: () => `<h3>What the contract says</h3>${clauseBox(c, '2')}${clauseBox(c, '3')}${clauseBox(c, 'OF-4')}
@@ -74,10 +77,11 @@
       { id: 'C1', role: 'owner', title: "Decide whether to accept Deccan's force majeure claim", detail: `The default is not to accept it: clause 5.1 needs written evidence within 5 days and none was sent. Accepting it lowers the credit from ${cm(c, s.creditFull)} to ${cm(c, s.creditFm)}.`, done: decided,
         btns: [{ label: 'Claim the full credit', fn: 'fm', arg: '0' }, { label: 'Accept force majeure', fn: 'fm', arg: '1' }] },
       { id: 'C2', role: 'owner', title: `Send the claim by ${fmtD(s.claimBy)}`, detail: `Claim ${cm(c, s.credit)} for September. After ${fmtD(s.claimBy)} the credit is lost.`, done: s.claimed, due: s.claimBy, btns: [{ label: 'Send the claim', fn: 'claim', arg: SLA_C }] },
-      { id: 'C3', role: 'owner', title: 'Confirm the credit shows on the next invoice', detail: 'This closes the case and counts the credit as confirmed.', done: !!S.confirmed.C, btns: [{ label: 'Confirm and close', fn: 'confirm', arg: 'C' }] }
+      { id: 'C3', role: 'owner', title: 'Confirm the credit shows on the next invoice', detail: 'This counts the credit as confirmed.', done: !!S.confirmed.C, btns: [{ label: 'Confirm the credit', fn: 'confirm', arg: 'C' }] },
+      { id: 'C4', role: 'procurement', title: 'Agree with Deccan how evidence of delays is sent', detail: 'Put the 5-day evidence rule into the monthly review, so the next claim is not argued after the fact. This closes the case.', done: !!S.steps.C4, btns: [{ label: 'Agreed and noted', fn: 'step', arg: 'C4' }] }
     ];
-    return { id: 'C', c, title: 'Deccan Freightways missed its on-time target in September', short: 'Late-delivery credit', steps, side: [],
-      stage: S.confirmed.C ? 4 : s.claimed ? 3 : decided ? 2 : 0, closed: !!S.confirmed.C, oneOff: { c, amt: s.credit, note: s.fmOn ? 'force majeure accepted' : '' }, yearly: null,
+    return { id: 'C', c, happened: `Deccan delivered ${s.h.actual}% of consignments on time in September against a target of ${s.sla.target}%. The contract gives a credit for that. Deccan says flooding caused part of it, but sent no evidence.`, title: 'Deccan Freightways missed its on-time target in September', short: 'Late-delivery credit', steps, side: [],
+      stage: S.confirmed.C && S.steps.C4 ? 5 : S.confirmed.C ? 4 : s.claimed ? 3 : decided ? 2 : 0, closed: !!S.confirmed.C && !!S.steps.C4, oneOff: { c, amt: s.credit, note: s.fmOn ? 'force majeure accepted' : '' }, yearly: null,
       proof: () => `<h3>What the contract says</h3>${clauseBox(c, '5')}${clauseBox(c, '5.1')}
         <h3>What Deccan says</h3><p>${esc(s.h.fm)}</p>
         <h3>The working ${asm('A5')}</h3>${table(['Position', 'On-time', 'Full points below 96%', 'Credit'], [[`Force majeure not accepted${s.fmOn ? '' : ' (chosen)'}`, s.h.actual + '%', Math.floor(96 - s.h.actual + 1e-6), cm(c, s.creditFull)], [`Force majeure accepted${s.fmOn ? ' (chosen)' : ''}`, s.h.fmActual + '%', Math.floor(96 - s.h.fmActual + 1e-6), cm(c, s.creditFm)]])}
@@ -91,10 +95,11 @@
     const steps = [
       { id: 'D1', role: 'legal', title: 'Check the Q4 discount clause', detail: 'The AI read a further 5% discount for October to December 2026. The October invoice did not apply it.', done: legal, btns: [{ label: 'Confirm the 5% discount', fn: 'confirmTerm', arg: 'C-007|Q4 extra discount' }] },
       { id: 'D2', role: 'finance', title: 'Ask Stratus to credit October and apply the discount from now on', detail: `Dispute ${cm(c, k.over)} on invoice ${INV_D} and ask for the discount on the November and December invoices.`, done: k.disputed, lock, btns: [{ label: 'Hold and send the dispute', fn: 'dispute', arg: INV_D }] },
-      { id: 'D3', role: 'finance', title: 'Confirm the credit has arrived', detail: 'This closes the case and counts the amount as confirmed.', done: !!S.confirmed.D, lock, btns: [{ label: 'Confirm and close', fn: 'confirm', arg: 'D' }] }
+      { id: 'D3', role: 'finance', title: 'Confirm the credit has arrived', detail: 'This counts the amount as confirmed.', done: !!S.confirmed.D, lock, btns: [{ label: 'Confirm the credit', fn: 'confirm', arg: 'D' }] },
+      { id: 'D4', role: 'finance', title: "Check that November's invoice shows the 5% discount", detail: 'The case closes when the discount appears without being asked for.', done: !!S.steps.D4, lock, btns: [{ label: 'November shows the discount', fn: 'step', arg: 'D4' }] }
     ];
-    return { id: 'D', c, title: 'Stratus Cloud left the Q4 discount off the October invoice', short: 'Q4 discount', steps, side: [],
-      stage: S.confirmed.D ? 4 : k.disputed ? 3 : legal ? 1 : 0, closed: !!S.confirmed.D, priority: legal ? null : pr,
+    return { id: 'D', c, happened: 'The contract gives a further 5% off charges from October to December 2026. Stratus did not take it off the October invoice, and nobody had the clause in front of them when the invoice was approved.', title: 'Stratus Cloud left the Q4 discount off the October invoice', short: 'Q4 discount', steps, side: [],
+      stage: S.confirmed.D && S.steps.D4 ? 5 : S.confirmed.D ? 4 : k.disputed ? 3 : legal ? 1 : 0, closed: !!S.confirmed.D && !!S.steps.D4, priority: legal ? null : pr,
       oneOff: { c, amt: k.over, note: legal ? '' : 'if the clause is confirmed' }, yearly: null, repeat: { c, amt: k.over * n, note: `the same miss on the ${plural(n, 'invoice')} still to come this quarter, at October's usage` },
       proof: () => `<h3>What the contract says</h3>${clauseBox(c, '4')}${clauseBox(c, '4.1')}
         <h3>The invoice against the contract</h3>${table(['Line', 'Billed', 'Per contract', 'Difference'], k.lines.map(l => [l.desc, cm2(c, l.billedAmt), cm2(c, l.expected), '+' + cm2(c, l.variance)]))}
@@ -105,7 +110,7 @@
   const current = k => k.steps.find(s => !s.done) || null;
 
   /* ---------- actions: the buttons and the tour's "Do it for me" both call these ---------- */
-  const STEP_LOG = { A2: ['C-002', 'accepted the role check on the Sahyadri invoice.'], A4: ['C-002', 'confirmed nobody approved the Sahyadri travel charge.'], A5: ['C-002', 'issued a credit note for the October invoice.'], B2: ['C-001', 'approved the wording of the Brightlane non-renewal notice.'] };
+  const STEP_LOG = { A2: ['C-002', 'accepted the role check on the Sahyadri invoice.'], A4: ['C-002', 'confirmed nobody approved the Sahyadri travel charge.'], A5: ['C-002', 'issued a credit note for the October invoice.'], B2: ['C-001', 'approved the wording of the Brightlane non-renewal notice.'], A8: ['C-002', 'confirmed that the November invoice uses the right rate.'], C4: ['C-003', 'agreed with Deccan how evidence of delays will be sent.'], D4: ['C-007', 'confirmed that the November invoice shows the discount.'] };
   const store = {
     confirmTerm(arg) { const [cid, label] = arg.split('|'), c = byId(cid), t = c && term(c, label); if (!t || isVerified(c, t)) return false;
       S.verified[verifiedKey(c, t)] = true; addLog({ who: who(), cid, text: `confirmed the term "${label}" against §${t.clause}.` }); return true; },
@@ -132,6 +137,9 @@
       const m = { id: uid('msg'), on: S.asOf, cid: c.id, to: `${c.supplier} (supplier)`, subject: `Service credit claim: ${s.sla.name}`, body: `Dear team,\n\n${s.sla.name} was ${s.actual}% against a target of ${s.sla.target}%. Under clause ${s.sla.clause} we claim a credit of ${s.pct}% of charges of ${cm(c, s.h.fee)}, which is ${cm(c, s.credit)}.${s.h.fm && !s.fmOn ? ' We have not left out the consignments you attribute to flooding, because no written evidence was received within 5 days as clause 5.1 requires.' : ''}\n\nPlease show the credit on the next invoice.\n\nRegards,\n${D.people.owner}\n${D.company}` };
       S.outbox.unshift(m); addLog({ who: who(), cid: c.id, text: `sent a service credit claim of ${cm(c, s.credit)} to ${c.supplier}.`, msg: m.id }); return true; },
     confirm(id) { if (S.confirmed[id]) return false; const k = cases().find(x => x.id === id); S.confirmed[id] = { on: S.asOf, by: who() }; addLog({ who: who(), cid: k ? k.c.id : null, text: `confirmed and closed case ${id}.` }); return true; },
+    fixRow(cid) { if (S.trackerFixed[cid]) return false; const r = trackerRows().find(x => x.cid === cid); if (!r) return false;
+      if (r.waits) { toast('This row waits until Legal has checked the amendment.'); return null; }
+      S.trackerFixed[cid] = S.asOf; addLog({ who: who(), cid, text: 'corrected this contract\'s row in the Excel tracker.' }); return true; },
     tracker() { const rows = trackerRows().filter(r => r.ready); if (!rows.length) return false; rows.forEach(r => { S.trackerFixed[r.cid] = S.asOf; }); addLog({ who: who(), text: `updated ${plural(rows.length, 'row')} of the Excel tracker from Countersign.` }); return true; }
   };
 
@@ -149,14 +157,24 @@
       ${side ? `<p class="muted">${esc(st.detail)}</p>` : `<div class="tc-step"><span class="k">Now · ${esc(person(st.role))}${k.priority ? ` · Legal priority ${k.priority}` : ''}</span><strong>${esc(st.title)}</strong><span class="muted">${esc(st.detail)}</span></div>`}
       <div class="tc-foot"><span class="btns">${stepBtns(st)}</span><span class="btns">${isIso(st.due) ? dueChip(diff(st.due, S.asOf)) : ''}<a class="btn sm ghost" href="#item-${k.id.toLowerCase()}">Open the case</a></span></div></div>`;
   }
+  const mineOf = (k, role) => { const st = current(k); return !!st && (role === 'all' || st.role === role); };
+  const stakeOf = k => k.oneOff ? `${cm(k.oneOff.c, k.oneOff.amt)} at stake` : k.yearly ? `${cm(k.yearly.c, k.yearly.amt)} a year` : k.c.annualValue ? `${cm(k.c, k.c.annualValue)} a year at stake` : '';
   function todoHtml() {
     const all = cases(), role = S.role, cards = []; let closed = 0;
-    all.forEach(k => { if (k.closed) { closed++; return; } const st = current(k);
-      if (st && (role === 'all' || st.role === role)) cards.push(todoCard(k, st, false));
+    all.forEach(k => { if (k.closed) { closed++; return; }
+      if (mineOf(k, role)) cards.push(todoCard(k, current(k), false));
       k.side.forEach(s => { if (!s.done && !s.lock && (role === 'all' || s.role === role)) cards.push(todoCard(k, s, true)); }); });
     const open = all.filter(k => !k.closed).length;
-    return `<section class="panel" id="todo"><div class="panel-head"><div><h2>To-do${role === 'all' ? '' : ': ' + D.people[role]}</h2><p class="muted sm">One card per case, showing only the step that is due now.</p></div>${pill('info', `${plural(open, 'open case')}${closed ? ', ' + closed + ' closed' : ''}`)}</div>
-      <div class="tcards">${cards.join('') || `<p class="empty">${role === 'all' ? 'Every case is closed.' : `Nothing is waiting for ${D.people[role]} right now. ${open ? 'Other cases are with other people.' : ''}`}</p>`}</div></section>`;
+    return `<section class="panel" id="todo"><div class="panel-head"><div><h2>${role === 'all' ? 'Every open case' : 'Your to-do'}</h2><p class="muted sm">${role === 'all' ? 'One card per case, showing the step that is due now and who has it.' : `${esc(D.people[role])}, ${ROLE1[role]}. One card per case, showing only the step that is yours now.`}</p></div>${pill('info', `${plural(open, 'open case')}${closed ? ', ' + closed + ' closed' : ''}`)}</div>
+      <div class="tcards">${cards.join('') || `<p class="empty">${open ? 'Nothing needs you right now. The cases you are part of are listed under "Waiting on others".' : 'Every case is closed.'}</p>`}</div></section>`;
+  }
+  /* Cases that are with someone else. A department sees only the cases it has a later step in. */
+  function waitingHtml() {
+    const role = S.role; if (role === 'all') return '';
+    const rows = cases().filter(k => !k.closed && !mineOf(k, role) && (CS.isAdmin() || k.steps.concat(k.side).some(s => !s.done && s.role === role)));
+    if (!rows.length) return '';
+    return `<section class="panel" id="waiting"><div><h2>Waiting on others (${rows.length})</h2><p class="muted sm">Cases you are part of that are with someone else. Nothing to do yet.</p></div>
+      <div class="wrows">${rows.map(k => { const st = current(k); return `<a class="wrow" href="#item-${k.id.toLowerCase()}"><strong>${esc(k.title)}</strong><span class="muted sm">${[stakeOf(k), isIso(st.due) ? 'due ' + fmtD(st.due) : ''].filter(Boolean).join(' · ')}</span><span class="wwho">Waiting on ${esc(person(st.role))}. View</span></a>`; }).join('')}</div></section>`;
   }
   const caseBanner = cid => cases().filter(k => k.c.id === cid && !k.closed).map(k => { const st = current(k); return `<a class="casebanner" href="#item-${k.id.toLowerCase()}"><span class="tc-letter">${k.id}</span><span><strong>Open case: ${esc(k.title)}</strong><span class="muted"> · ${STAGES[k.stage]}${st ? ` · now with ${esc(person(st.role))}` : ''}</span></span></a>`; }).join('');
 
@@ -172,12 +190,13 @@
     <ol class="stages" aria-label="Stage">${STAGES.map((s, i) => `<li class="${i < k.stage || (k.closed && i <= k.stage) ? 'done' : i === k.stage ? 'on' : ''}">${s}</li>`).join('')}</ol>
     ${k.closedNote ? `<p class="okline">${pill('ok', 'Closed')} ${esc(k.closedNote)}</p>` : ''}
     <div class="item">
+      <section class="panel" id="happened"><h2>What happened</h2><p>${esc(k.happened)}</p></section>
       <section class="panel" id="steps"><div class="panel-head"><h2>What to do</h2><button class="btn sm ghost" data-act="csv" data-what="item" data-id="${k.id}">Download the working (CSV)</button></div>
         <div class="steps">${list.map(st => { const state = st.done ? 'done' : st.lock ? 'locked' : st === cur || st.side ? 'now' : 'later';
           return `<div class="stp ${state}" data-step="${st.id}"><span class="stp-dot">${st.done ? '✓' : st.id}</span><div class="stp-main"><span class="k">${esc(person(st.role))}${st.side ? ' · side task' : ''}</span><strong>${esc(st.title)}</strong><span class="muted">${esc(st.detail)}</span>
             ${state === 'done' ? '<span class="check">Done</span>' : state === 'locked' ? `<span class="locked">${esc(st.lock)}</span>` : state === 'now' ? `<span class="btns">${stepBtns(st)} ${isIso(st.due) ? dueChip(diff(st.due, S.asOf)) : ''}</span>` : '<span class="muted sm">Opens when the step before it is done.</span>'}</div></div>`; }).join('')}</div>
       </section>
-      <section class="panel" id="proof"><h2>The proof</h2>${k.proof()}</section>
+      <section class="panel" id="proof"><div class="panel-head"><h2>The proof</h2>${CS.src('calc')}</div>${k.proof()}</section>
     </div>`;
   }
 
@@ -187,7 +206,7 @@
     const sum = (f, conf) => ks.reduce((s, k) => { const v = k[f]; return s + (v && (!conf || S.confirmed[k.id]) ? toInr(v.c, v.amt) : 0); }, 0);
     const rep = ks.filter(k => k.repeat), gst = ks.filter(k => k.gst);
     return `
-    <div class="head"><h1>Value</h1><p class="sub">What the cases are worth. One-off amounts and yearly amounts are different kinds of money, so they are shown side by side and never added together.</p></div>
+    <div class="head"><h1>Value</h1><p class="sub">What the cases are worth. One-off amounts and yearly amounts are different kinds of money, so they are shown side by side and never added together. ${CS.src('calc')}</p></div>
     <div class="kpis" id="value-tiles">
       <div class="tile"><div class="k">One-off · found</div><div class="v">${inrC(sum('oneOff'))}</div><div class="s">Credits and overbilling in open and closed cases</div></div>
       <div class="tile"><div class="k">One-off · confirmed</div><div class="v">${inrC(sum('oneOff', true))}</div><div class="s">Confirmed by Finance</div></div>
@@ -225,7 +244,7 @@
   function trackerHtml() {
     const rows = trackerRows(), ready = rows.filter(r => r.ready).length, missing = contracts().filter(c => !D.tracker.some(t => t.cid === c.id));
     const cell = (r, f) => { const bad = r.wrong.includes(f); if (!bad) return esc(r.t[f]); if (r.fixed) return `${esc(r.truth[f])}<div class="muted sm">was ${esc(r.t[f])}</div>`; return `<span class="badcell">${esc(r.t[f])}</span><div class="muted sm">contract says ${esc(r.truth[f])}</div>`; };
-    return `<section class="panel flush" id="tracker"><div class="pad panel-head"><div><h2>The Excel tracker, checked against the contracts</h2><p class="muted sm">The company's spreadsheet as it stands today. Cells that disagree with the contract are marked.</p></div>
+    return `<section class="panel flush" id="tracker"><div class="pad panel-head"><div><h2>The Excel tracker, checked against the contracts</h2><p class="muted sm">The company's spreadsheet as it stands today. Cells that disagree with the contract are marked. ${CS.src('sample')} ${CS.src('calc')}</p></div>
       <span class="btns"><button class="btn sm primary" data-act="store" data-fn="tracker" data-arg="" ${ready && CS.can('tracker') ? '' : 'disabled'}>Update the tracker from Countersign${ready ? ` (${plural(ready, 'row')})` : ''}</button><button class="btn sm" data-act="copy-tracker">Copy corrected rows</button><button class="btn sm ghost" data-act="csv" data-what="tracker">Download CSV</button></span></div>
       <div class="scroll"><table class="t"><thead><tr><th>Supplier</th><th>Term ends</th><th>Notice</th><th>Price</th><th>Owner</th><th>Tracker row</th></tr></thead><tbody>
       ${rows.map(r => `<tr><td><a class="rowlink" href="${cLink(r.c)}">${esc(r.c.supplier)}</a><div class="muted sm">${r.cid}</div></td><td>${cell(r, 'end')}</td><td>${cell(r, 'notice')}</td><td>${cell(r, 'price')}</td><td>${cell(r, 'owner')}</td>
@@ -259,7 +278,7 @@
       A10: 'The Indian law shown is simplified and is not legal advice. GST is worked out at 18% for the staffing case only.' };
   }
   const notesHtml = () => `<ul>
-      <li><strong>One card per case.</strong> The to-do list shows only the current step of each case. Case A also shows the travel charge (A4) as a side card once Legal has checked the rate.</li>
+      <li><strong>One card per case.</strong> The to-do list shows only the current step of each case. Cases that are with someone else are listed under "Waiting on others". Case A also shows the travel charge (A4) as a side card once Legal has checked the rate.</li>
       <li><strong>Steps wait for Legal.</strong> Sahyadri steps from the role check onward show "Locked: waiting for Legal to check the rate". A step that belongs to someone else reads "This step is for Legal. Switch to Legal".</li>
       <li><strong>Brightlane dispatch date.</strong> The notice must be received by 30 Nov 2026. The card asks Procurement to dispatch 3 working days earlier, the courier time in the lead-time breakdown.</li>
       <li><strong>Brightlane decisions.</strong> "Renew as quoted" and "Don't renew" close or shorten the case and count no saving. Only a renegotiation counts value.</li>
@@ -267,17 +286,17 @@
       <li><strong>Stratus Cloud.</strong> Two months of the Q4 discount are still ahead (November and December), which is how its 10-point Legal priority is worked out: 5 points a month, capped at 20.</li>
       <li><strong>Excel tracker.</strong> "Update the tracker from Countersign" records the fix. A web page cannot edit a spreadsheet, so there is also "Copy corrected rows". The Sahyadri row waits until Legal has checked Amendment No. 2.</li>
       <li><strong>Value page.</strong> One-off and yearly amounts are shown side by side and never added together. Repeat overcharges prevented and GST are shown apart from confirmed value.</li>
-      <li><strong>Stage names.</strong> Every case ends at "Confirmed by Finance", even when the person who confirmed was the business owner or Procurement, as with Brightlane and Deccan.</li>
+      <li><strong>Stage names.</strong> Every case passes through "Confirmed by Finance", even when the person who confirmed was the business owner or Procurement, and closes at "Fixed at source", once the tracker is corrected or the next invoice comes in right.</li>
       <li><strong>Counts in assumption A1</strong> come from the data, not from a typed figure.</li>
       <li><strong>Dark mode.</strong> Status colours are lightened so text stays readable, and the dark blue buttons become a lighter blue.</li>
       <li><strong>Sample contracts.</strong> The documents are short clause extracts written for this prototype. Real contracts are longer and more formal, with a dated preamble, named parties and recitals. Nothing was copied from any source.</li>
-      <li><strong>Tour.</strong> Four chapters. Each step rings one area of the page and a docked guide explains it. "Do it for me" calls the same action as the button and says "Already done" if you got there first. Choosing a tab mid-tour asks "Leave the tour?". The tour is for Admin, because it switches between roles.</li>
-      <li><strong>Welcome and sign-in.</strong> A first screen explains the idea, then you choose who to sign in as. Finance, Legal, Procurement and the business owner each have a sign-in page and see only their own tasks and queues. Admin sees everything and can act as any role. The sign-in is simulated and is not real security. Sign out returns to the start.</li>
+      <li><strong>Tour.</strong> Four chapters. Each follows one case through every person, switching who you are as it goes. Each step rings one area of the page and a side panel explains it (a bottom sheet on phones). "Do it for me" calls the same action as the button and says "Already done" if you got there first. Choosing a tab mid-tour asks "Leave the tour?". The tour is for Admin, because it switches between roles.</li>
+      <li><strong>Welcome and sign-in.</strong> A first screen explains the idea, then one sign-in page with the details already filled in and a drop-down of who to sign in as. Finance, Legal, Procurement and the business owner see only their own tasks and queues. Admin sees everything and can act as any role. The sign-in is simulated and is not real security.</li>
       <li><strong>Layout.</strong> Pages use the full width on large screens. Case pages are two columns on laptops (what to do on the left, the proof on the right) and one column on phones.</li>
       <li><strong>Assumption tags.</strong> The dashed yellow tags A1 to A10 are used only for assumptions, so they never read as a status or a money gap.</li>
       <li><strong>Excel files.</strong> Case pages, Contracts and Value offer CSV files that open in Excel.</li>
       <li><strong>People.</strong> All names are invented. The five role holders are Ritika Deshmukh (Finance), Rushikesh Kulkarni (Legal), Yash Patil (Procurement), Anuj Shinde (business owner) and Udit Pawar (Sahyadri billing).</li>
     </ul>`;
 
-  Object.assign(CS, { STAGES, cases, caseOf, store, todoHtml, caseBanner, vItem, vValue, trackerHtml, csv, copyTracker, assumptions, notesHtml });
+  Object.assign(CS, { STAGES, cases, caseOf, store, todoHtml, waitingHtml, caseBanner, vItem, vValue, trackerHtml, csv, copyTracker, assumptions, notesHtml });
 })();
