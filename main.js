@@ -5,8 +5,8 @@
   const { D, $, isIso, fmtD, S, save, resetState, byId, ROLE1, who, addLog, addTask, renewal, invoiceChecks, cLink, verifiedKey, findClause, toInr, inrC, toast, setAi } = CS;
 
   /* Six top tabs. Renewals, the invoice check and adding a contract sit inside Contracts. */
-  const TOP = [['overview', 'Overview'], ['contracts', 'Contracts'], ['ask', 'Ask'], ['agent', 'Agent'], ['value', 'Value'], ['case', 'Case analysis']];
-  const SUB = [['contracts', 'All contracts'], ['renewals', 'Renewals'], ['invoices', 'Invoice check'], ['add', 'Add a contract']];
+  const TOP = [['overview', 'Overview'], ['contracts', 'Contracts'], ['ask', 'Ask'], ['agent', 'Agent'], ['value', 'Value'], ['case', 'Case Analysis']];
+  const SUB = [['contracts', 'All Contracts'], ['renewals', 'Renewals'], ['invoices', 'Invoice Check'], ['add', 'Add a Contract']];
   const SUBK = SUB.map(x => x[0]), TABS = TOP.concat(SUB.slice(1));
   function route() { const h = (location.hash || '').slice(1); if (h.startsWith('contract-')) return { name: 'contract', id: h.slice(9).toUpperCase() }; if (h.startsWith('item-')) return { name: 'item', id: h.slice(5).toUpperCase() }; return { name: TABS.some(t => t[0] === h) ? h : 'overview' }; }
   let lastRoute = '';
@@ -126,6 +126,25 @@
   document.addEventListener('submit', e => { if (e.target.id === 'askform') { e.preventDefault(); CS.ask($('#askq').value); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.draft) CS.closeDrawer(); });
   window.addEventListener('hashchange', () => render());
+
+  /* Headings are shown in title case. Small joining words stay lower-case unless they open the heading;
+     words that already carry capitals (AI, CSV, names) and figures are left alone. */
+  const MINOR = new Set(['a', 'an', 'the', 'and', 'but', 'or', 'nor', 'for', 'at', 'by', 'in', 'of', 'on', 'to', 'as', 'per', 'via']);
+  const capPart = (w, force) => { const m = w.match(/^([^A-Za-z]*)([a-z][a-z']*)(.*)$/); if (!m) return w; return !force && MINOR.has(m[2]) ? w : m[1] + m[2][0].toUpperCase() + m[2].slice(1) + m[3]; };
+  function titleCase(text, state) {
+    return text.split(/(\s+)/).map(tok => { if (!tok.trim()) return tok;
+      const force = state.first || /[,;]$/.test(tok); state.first = /[:?.!]$/.test(tok);
+      return tok.split('-').map((part, i) => capPart(part, force || i > 0)).join('-'); }).join('');
+  }
+  function capHeadings() {
+    document.querySelectorAll('h1, h2, h3').forEach(h => { const state = { first: true }, walk = document.createTreeWalker(h, NodeFilter.SHOW_TEXT); let n;
+      let last = null;
+      while ((n = walk.nextNode())) { if (n.parentElement.closest('.asm, .srcl, .pill, .cite, input, select')) continue; const t = titleCase(n.nodeValue, state); if (t !== n.nodeValue) n.nodeValue = t; if (/[A-Za-z]/.test(n.nodeValue)) last = n; }
+      /* The last word of a heading is always capitalised, even a small one ("Sign In"). */
+      if (last) { const m = last.nodeValue.match(/^([\s\S]*?)([a-z][A-Za-z']*)([^A-Za-z]*)$/); if (m && !/[A-Za-z]/.test(m[1].slice(-1))) last.nodeValue = m[1] + m[2][0].toUpperCase() + m[2].slice(1) + m[3]; } });
+  }
+  let capTimer = null;
+  new MutationObserver(() => { clearTimeout(capTimer); capTimer = setTimeout(capHeadings, 0); }).observe(document.body, { childList: true, subtree: true, characterData: true });
 
   /* When AI connects or drops, redraw the two screens that show its state. */
   CS.onAi = () => { const n = route().name; if (S.user && (n === 'ask' || n === 'agent') && !(S.run && S.run.busy) && !S.busy) render(); };
