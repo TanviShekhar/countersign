@@ -376,11 +376,27 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
 }
 .askoff{display:flex;gap:10px 16px;justify-content:space-between;align-items:center;flex-wrap:wrap;background:var(--surface-2);border:1px dashed var(--ink-3);border-radius:8px;padding:10px 12px}
 .askoff>div{flex:1 1 320px;min-width:0}
+
+/* --- top bar and tabs stay in place while the page scrolls --- */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:13;background:var(--bg)}
+.stick{position:sticky;top:env(safe-area-inset-top,0px);z-index:12;background:var(--bg);display:flex;flex-direction:column;gap:10px;padding-top:12px;margin-top:-12px}
+.docpane{top:132px}
+#view [id],#view .clause,#view .stp{scroll-margin-top:136px}
+/* On phones only the tabs stay fixed: the full top bar would take too much of the screen. */
+@media (max-width:700px){ .stick{display:contents} .tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:12;background:var(--bg);padding-top:4px} #view [id],#view .clause,#view .stp{scroll-margin-top:56px} }
+
+/* --- case analysis: sections use the full width --- */
+.case p,.case li{max-width:none}
+.case .panel>p{max-width:130ch}
+.case .panel>ul,#notes ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:8px 36px;align-items:start}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:8px 36px;align-items:start}
+.cgrid h3{margin-top:4px} .cgrid>div{display:flex;flex-direction:column;gap:8px}
 </style>
 </head>
 <body>
 <div id="gate" class="gate" hidden></div>
 <div class="wrap" id="app" hidden>
+  <div class="stick">
   <header class="top">
     <div class="brand"><b>Countersign</b><span class="muted">Vindhya Consumer Brands supplier contracts · sample data</span></div>
     <div class="topright">
@@ -394,6 +410,7 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
     </div>
   </header>
   <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+  </div>
   <main id="view"></main>
   <footer class="pagefoot">
     <span>Prototype with fictional companies and figures. AI answers and drafts come from Claude; check them against the cited clause before acting.</span>

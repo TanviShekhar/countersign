@@ -5,7 +5,7 @@
   const { D, $, isIso, fmtD, S, save, resetState, byId, ROLE1, who, addLog, addTask, renewal, invoiceChecks, cLink, verifiedKey, findClause, toInr, inrC, toast, setAi } = CS;
 
   /* Six top tabs. Renewals, the invoice check and adding a contract sit inside Contracts. */
-  const TOP = [['overview', 'Overview'], ['contracts', 'Contracts'], ['ask', 'Ask'], ['agent', 'Agent'], ['value', 'Value'], ['case', 'The case']];
+  const TOP = [['overview', 'Overview'], ['contracts', 'Contracts'], ['ask', 'Ask'], ['agent', 'Agent'], ['value', 'Value'], ['case', 'Case analysis']];
   const SUB = [['contracts', 'All contracts'], ['renewals', 'Renewals'], ['invoices', 'Invoice check'], ['add', 'Add a contract']];
   const SUBK = SUB.map(x => x[0]), TABS = TOP.concat(SUB.slice(1));
   function route() { const h = (location.hash || '').slice(1); if (h.startsWith('contract-')) return { name: 'contract', id: h.slice(9).toUpperCase() }; if (h.startsWith('item-')) return { name: 'item', id: h.slice(5).toUpperCase() }; return { name: TABS.some(t => t[0] === h) ? h : 'overview' }; }

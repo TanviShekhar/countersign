@@ -30,7 +30,7 @@
       <aside class="gate-note"><h2>Before you explore</h2>
         <p><strong>A prototype for a case study.</strong> ${esc(D.company)} and its ${contracts().length} suppliers, ${docs} documents, people and figures are all invented. Nothing is sent and no money moves.</p>
         <p><strong>The sign-in is simulated.</strong> It shows what each team would see. It is not security.</p>
-        <p>Dashed yellow tags like ${CS.asm('A7')} mark an <strong>assumption</strong>. All ten are on The case tab.</p>
+        <p>Dashed yellow tags like ${CS.asm('A7')} mark an <strong>assumption</strong>. All ten are on the Case analysis tab.</p>
         <p>Labels like ${CS.src('calc')} or ${CS.src('sample')} say where a figure came from.</p></aside></div>`;
     else if (gate === 'signin') el.innerHTML = `<div class="gate-in wide">
       <div class="gate-main narrowcol">
@@ -54,7 +54,7 @@
       <div class="gate-cols">
         <button class="choice rec" data-act="gate-start" data-how="tour"><span class="k">Recommended</span><strong>Walk me through it</strong><span>A guided tour that follows one case through every person and points at what to look at.</span></button>
         <button class="choice" data-act="gate-start" data-how="explore"><strong>Explore on my own</strong><span>Go straight to the to-do page. The tour stays available from the top bar.</span></button>
-        <button class="choice" data-act="gate-start" data-how="case"><strong>Read the case first</strong><span>Why this stage, who it is for, the problem and how success is measured.</span></button>
+        <button class="choice" data-act="gate-start" data-how="case"><strong>Read the case analysis first</strong><span>Why this stage, who it is for, the problem and how success is measured.</span></button>
       </div></div>`;
   }
   function enter() { gate = 'intro'; renderGate(); if (location.hash !== '#overview') location.hash = '#overview'; CS.render(); window.scrollTo(0, 0); }

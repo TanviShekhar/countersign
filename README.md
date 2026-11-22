@@ -16,7 +16,7 @@ its eight suppliers, the twelve contract documents, the people and every figure.
 - **Scans:** scanned PDFs and photos are read into text by AI, then the terms are extracted.
 - **Agent:** a sweep that does routine actions itself, asks before anything binding, and hands the rest to a person.
 - **Value:** one-off and yearly amounts side by side, with repeat overcharges and GST shown apart.
-- **The case:** why this stage, the stakeholder map, the problem, the flows, assumptions and success metrics.
+- **Case analysis:** why this stage, the stakeholder map, the problem, the flows, assumptions and success metrics.
 
 ## Signing in
 
@@ -25,7 +25,7 @@ Every account uses the password `test`.
 
 | Sign in as | Username | What you see |
 |---|---|---|
-| Admin | `admin` | Everything: all queues, the agent, value and the case. Can act as any role. |
+| Admin | `admin` | Everything: all queues, the agent, value and the case analysis. Can act as any role. |
 | Finance (Ritika Deshmukh) | `finance` | Invoice checks, payment holds, rebates, Finance approvals, value. |
 | Legal (Rushikesh Kulkarni) | `legal` | Terms to confirm, notices to approve, compliance gaps, adding contracts. |
 | Procurement (Yash Patil) | `procurement` | Renegotiations, coverage gaps, missing documents, renewals, the Excel tracker. |

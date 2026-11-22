@@ -122,7 +122,7 @@
     const got = Object.keys(S.claims).length + Object.keys(S.disputed).length;
     const row = (a, b, c2, d2) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c2}</td><td>${d2}</td></tr>`;
     return `
-    <div class="head"><h1>The case for this prototype</h1><p class="sub">What was built, for whom, on which assumptions, and how to tell whether it works. Figures marked live are worked out from the sample data on the other tabs.</p></div>
+    <div class="head"><h1>Case analysis</h1><p class="sub">What was built, for whom, on which assumptions, and how to tell whether it works. Figures marked live are worked out from the sample data on the other tabs.</p></div>
     <div class="case">
 
     <section class="panel"><div class="eyebrow">1 · Why this stage</div><h2>The intelligent repository, because the losses sit in contracts already signed</h2>
@@ -155,20 +155,20 @@
 
     <section class="panel"><div class="eyebrow">3 · The problem</div><h2>Signed contracts are documents nobody can ask questions of</h2>
       <p>A renewal date, a price or a service level sits inside a PDF, often a scan, in a shared drive. Nothing reminds anyone, and the person paying the invoice cannot see the price that was agreed.</p>
-      <h3>Who it affects</h3>
+      <div class="cgrid"><div><h3>Who it affects</h3>
       <ul>
         <li><strong>Contract owners</strong> learn about a renewal after the notice window has closed.</li>
         <li><strong>Finance</strong> pays invoices without the contract price in front of them, and carries commitments it cannot see.</li>
         <li><strong>Procurement</strong> negotiates without knowing usage, performance or what other teams pay the same supplier.</li>
         <li><strong>Legal</strong> cannot answer "which contracts contain this clause?" without reading them all.</li>
       </ul>
-      <h3>Why it matters</h3>
+      </div><div><h3>Why it matters</h3>
       <ul>
         <li><strong>Money:</strong> renewals at a higher price, overbilling, credits and rebates never claimed, minimum commitments missed.</li>
         <li><strong>Risk:</strong> work continuing after a contract has ended, personal data handled without the required agreement, agency workers whose PF and ESI may not have been paid.</li>
         <li><strong>Statutory cost:</strong> interest on late payment to small enterprises, and agreements that are not duly stamped.</li>
       </ul>
-      <h3>How we know it is real</h3>
+      </div><div><h3>How we know it is real</h3>
       <p>The brief reports these outcomes directly. The figures in this prototype are invented, so they prove the method, not the size of the problem. Four checks would size it with the company's own data in the first two weeks:</p>
       <ul>
         <li>Compare 12 months of payments with the contracts on file. Here that check finds <span class="live">${Math.round(tot ? gapSum / tot * 100 : 0)}%</span> of spend with no contract.</li>
@@ -176,7 +176,7 @@
         <li>Re-price one quarter of invoices for the top 20 suppliers against their contracts.</li>
         <li>Count service-level misses against credits actually received.</li>
       </ul>
-      <p class="muted">Industry bodies such as World Commerce &amp; Contracting have long put the cost of weak contract management at around 9% of contract value. Treat that as a reason to measure, not as a fact about this company.</p></section>
+      <p class="muted">Industry bodies such as World Commerce &amp; Contracting have long put the cost of weak contract management at around 9% of contract value. Treat that as a reason to measure, not as a fact about this company.</p></div></div></section>
 
     <section class="panel"><div class="eyebrow">4 · Core flows</div><h2>Four flows, each crossing more than one team</h2>
       <div class="flows">
