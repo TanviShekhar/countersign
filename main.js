@@ -99,8 +99,14 @@
       case 'view-msg': { const m = S.outbox.find(x => x.id === id); if (m) CS.showMessage(m, false); break; }
       case 'undo': CS.undoLog(id); break;
       case 'asof-reset': S.asOf = D.asOf; render(); break;
-      case 'reset': if (!S.resetArmed) { S.resetArmed = true; el.textContent = 'Select again to clear your changes'; setTimeout(() => { S.resetArmed = false; el.textContent = 'Reset sample data'; }, 4000); }
-        else { const u = S.user; resetState(); S.user = u; S.role = u ? CS.USERS[u].role : 'all'; save(); S.run = null; S.resetArmed = false; el.textContent = 'Reset sample data'; toast('Sample data restored.'); if (route().name === 'contract' && !byId(route().id)) location.hash = '#contracts'; else render(); } break;
+      case 'reset': $('#resetdlg').hidden = false; break;
+      case 'reset-no': $('#resetdlg').hidden = true; break;
+      /* Puts everything back to the first view: data, rules, date, tour and conversation. The sign-in and the AI connection stay. */
+      case 'reset-yes': { const u = S.user; $('#resetdlg').hidden = true; CS.tourEnd(); CS.closeDrawer(); resetState();
+        S.user = u; S.role = u ? CS.USERS[u].role : 'all'; S.asOf = D.asOf; S.run = null; S.chat = []; S.pendingQ = ''; S.scope = 'all'; S.busy = false;
+        S.q = ''; S.cat = 'All'; S.attn = 'all'; S.open = {}; S.doc = {}; S.hl = null; CS.resetAdd(); save();
+        const rt = route(); if (rt.name === 'contract' && !byId(rt.id)) location.hash = '#contracts'; else render();
+        window.scrollTo(0, 0); toast('The demo is back to its starting point.'); break; }
     }
   });
   document.addEventListener('input', e => {

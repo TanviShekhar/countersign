@@ -179,5 +179,5 @@
     renderGate();
   });
 
-  Object.assign(CS, { renderGate, tourRing: ring, tourOn: () => T.on });
+  Object.assign(CS, { renderGate, tourRing: ring, tourOn: () => T.on, tourEnd: endTour });
 })();

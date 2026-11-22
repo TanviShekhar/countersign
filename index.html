@@ -389,6 +389,7 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
       <label class="asof" for="asof">Viewing as of <input id="asof" type="date" value="2026-11-22"></label>
       <button class="btn sm ghost" id="asof-reset" data-act="asof-reset" hidden>Back to 22 Nov 2026</button>
       <button class="btn sm" id="tourbtn" data-act="tour-open">Tour</button>
+      <button class="btn sm ghost" data-act="reset">Reset demo</button>
       <button class="btn sm ghost" data-act="signout">Sign out</button>
     </div>
   </header>
@@ -396,7 +397,6 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
   <main id="view"></main>
   <footer class="pagefoot">
     <span>Prototype with fictional companies and figures. AI answers and drafts come from Claude; check them against the cited clause before acting.</span>
-    <button class="btn sm ghost" data-act="reset">Reset sample data</button>
   </footer>
 </div>
 
@@ -419,6 +419,7 @@ body.touring .wrap{margin-right:340px;padding-bottom:48px}
   <p id="ai-err" class="err" hidden></p>
   <div class="btns"><button class="btn primary" data-act="ai-save">Connect</button><button class="btn" data-act="ai-forget">Disconnect</button><button class="btn ghost" data-act="ai-close">Close</button></div>
 </div></div>
+<div id="resetdlg" class="tourleave" hidden><div class="leavebox" role="dialog" aria-label="Reset the demo?"><h2>Reset the demo?</h2><p class="muted">This puts everything back to the first view: every decision, approval, claim, added contract, the agent's rules, the activity log and the date. You stay signed in and on this page. It affects only this browser.</p><div class="btns"><button class="btn primary" data-act="reset-yes">Reset</button><button class="btn" data-act="reset-no">Cancel</button></div></div></div>
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script src="data.js"></script>

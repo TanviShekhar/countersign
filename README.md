@@ -40,6 +40,9 @@ change the agent's rules.
 With no AI connected, the Ask tab shows recorded example answers so you can see what a reply looks
 like. Select **Connect an AI model** there for live answers.
 
+**Reset demo** in the top bar puts all the sample data back to its starting point without signing
+you out, so anyone can walk through a flow again from scratch.
+
 ## Running the agent sweep when hosted
 
 The sweep has two ways to decide, chosen on the Agent tab:
